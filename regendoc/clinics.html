@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>클리닉 찾기 | RegenDoc 리젠닥</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="clinics">
+  <div id="site-header"></div>
+
+  <section class="page-hero">
+    <div class="container">
+      <h1 id="page-title">클리닉 찾기</h1>
+      <p>지역·분야별로 검증된 재생의료·롱제비티·프리미엄 검진 클리닉을 비교해 보세요.</p>
+    </div>
+  </section>
+
+  <div class="container list-layout">
+    <aside class="filters" id="filters">
+      <h4>키워드 검색</h4>
+      <input type="search" id="f-q" placeholder="클리닉명, 프로그램명">
+      <h4>지역</h4>
+      <div id="f-region"></div>
+      <h4>분야</h4>
+      <div id="f-cat"></div>
+      <button class="btn btn-outline btn-sm btn-block" id="reset" style="margin-top:18px">필터 초기화</button>
+    </aside>
+
+    <div>
+      <div class="list-top">
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn btn-outline btn-sm filter-toggle" onclick="document.getElementById('filters').classList.toggle('open')">필터</button>
+          <span id="count"></span>
+        </div>
+        <select id="sort" aria-label="정렬">
+          <option value="rec">추천순</option>
+          <option value="rating">평점순</option>
+          <option value="reviews">후기 많은순</option>
+          <option value="price">가격 낮은순</option>
+        </select>
+      </div>
+      <div class="clinic-grid list-grid" id="list"></div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
