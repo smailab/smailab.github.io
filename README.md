@@ -1,23 +1,39 @@
-# RegenDoc (리젠닥)
+# 설치 방법
+1. github 가입 ( https://github.com )
+2. 우측상단의 [+] 선택 후 Import repository 를 선택함
+3. url 입력 부분에 https://github.com/jams777/chatbotlanding.git 입력
+4. Name(이름에) 가입한 아이디를 활용하여 {아이디}.github.io 라는 이름으로 생성
+5. 퍼블릭으로 생성
 
-Longevity · 재생의료 · 프리미엄 건강검진 클리닉 비교/상담 플랫폼 (정적 사이트, GitHub Pages).
+# 수정 방법
+index.html 파일의 내용을 수정
 
-## 페이지
-| 파일 | 내용 |
-|---|---|
-| `index.html` | 메인 – 검색(지역/분야/키워드), 분야별 프로그램, 추천 클리닉, 이용방법, 후기, 칼럼, 상담신청, FAQ |
-| `clinics.html` | 클리닉 목록 – 지역·분야·키워드 필터, 정렬 (`?cat=`, `?region=`, `?q=`) |
-| `clinic.html?id=N` | 클리닉 상세 – 소개, 프로그램·가격, 의료진, 후기, 위치, 상담 폼 |
-| `community.html` | 커뮤니티 – 전문의 칼럼 / 자유게시판 / 치료 후기 (`?board=`, `?id=`) |
 
-## 구조
-- `css/style.css` – 전체 스타일 (반응형)
-- `js/data.js` – 클리닉·분야·후기·게시글·FAQ 데이터 **(현재는 시연용 샘플 데이터)**
-- `js/app.js` – 공통 헤더/푸터, 렌더링, 상담 폼 처리
+# 아래 라이센스에 따름
+Identity by HTML5 UP
+html5up.net | @ajlkn
+Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 
-## 운영 전 해야 할 일
-1. `js/data.js`를 실제 제휴 병원 정보로 교체
-2. `js/app.js`의 `BRAND`(대표번호, 카카오 채널 링크) 수정
-3. 상담 폼 전송처 연결 (`initConsultForm`의 TODO – 현재는 브라우저 localStorage에만 저장)
-4. 지도 API(카카오/네이버) 연동, 푸터 사업자 정보 입력
-5. 의료광고 사전심의 등 의료법 준수 여부 확인
+
+Just a fun little profile/card-style template I whipped up during a break between major
+projects. Minimal, responsive, and powered by Responsive Tools + Sass. Enjoy :)
+
+Demo images* courtesy of Unsplash, a radtastic collection of CC0 (public domain) images
+you can use for pretty much whatever.
+
+(* = not included)
+
+AJ
+aj@lkn.io | @ajlkn
+
+
+Credits:
+
+	Demo Images:
+		Unsplash (unsplash.com)
+
+	Icons:
+		Font Awesome (fontawesome.io)
+
+	Other:
+		Responsive Tools (github.com/ajlkn/responsive-tools)
