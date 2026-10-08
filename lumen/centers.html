@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>제휴 병원 | LUMEN 루멘</title>
+  <meta name="description" content="전국 LUMEN 제휴 영상의학센터. 지역, 보유 장비(MRI · CT · PET-CT), 주말 검사 여부로 검색하고 바로 예약하세요.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2215%22 fill=%22%230d1420%22/%3E%3Ccircle cx=%2214%22 cy=%2214%22 r=%228%22 fill=%22%233550f0%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="centers">
+  <div id="site-header"></div>
+
+  <section class="page-head">
+    <div class="container">
+      <p class="eyebrow">Partner Centers</p>
+      <h1>제휴 병원</h1>
+      <p>LUMEN 검사 프로토콜과 판독 기준을 동일하게 적용하는 전국 제휴 영상의학센터입니다. 원하는 지역과 검사 장비로 찾아보세요.</p>
+    </div>
+  </section>
+
+  <section style="padding-bottom:96px">
+    <div class="container">
+      <div class="region-bar" id="region-bar"></div>
+
+      <div class="filters">
+        <input type="search" id="f-q" placeholder="병원명, 지역, 장비 검색 (예: 3T, 강남, 오픈형)">
+        <div class="seg" id="f-region"></div>
+      </div>
+      <div class="filters" style="margin-top:-12px">
+        <span class="muted" style="font-size:14px">검사 장비</span>
+        <div class="seg" id="f-mod"></div>
+        <label class="check" style="margin-left:auto"><input type="checkbox" id="f-weekend"> 토요일 검사 가능</label>
+      </div>
+
+      <p class="result-count" id="count"></p>
+      <div class="center-grid" id="center-grid"></div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
