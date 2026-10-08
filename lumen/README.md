@@ -30,3 +30,8 @@ URL 파라미터: `book.html?pkg=heart-lung`, `book.html?scan=petct`, `book.html
 3. 예약 데이터를 실제로 받으려면 백엔드 연동 필요 (현재 예약 확정은 `#submit` 클릭 핸들러에서 localStorage에만 저장) – 예: Google Forms/Sheets, Formspree, Supabase, 병원 예약 API
 4. 시간대별 잔여 슬롯은 현재 데모용 의사난수 – 실제 병원 스케줄 API로 교체
 5. 의료광고 사전심의(의료법 제56·57조), 개인정보(민감정보) 처리방침, 비급여 가격 고지 검토
+
+## 이미지
+`img/*.jpg`는 `tools/gen_images.py`로 생성한 **합성 의료영상 일러스트**입니다 (실제 환자 영상 아님, 저작권 걱정 없음).
+재생성: `pip install numpy scipy pillow && python3 lumen/tools/gen_images.py`
+실제 센터·장비·고객 사진이 생기면 같은 파일명으로 교체하거나 `index.html`에 추가하면 됩니다.

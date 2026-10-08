@@ -11,7 +11,7 @@ const MODALITIES = {
 /* 개별 검사 항목 */
 const SCANS = [
   {
-    id: "wb-mri", modality: "MRI", tier: "core",
+    id: "wb-mri", img: "img/wholebody-mri.jpg", imgPos: "50% 18%", modality: "MRI", tier: "core",
     name: "전신 MRI", en: "Whole Body MRI",
     duration: 60, price: 2490000, radiation: "없음",
     tag: "대표 검사",
@@ -21,7 +21,7 @@ const SCANS = [
     prep: ["검사 4시간 전부터 금식", "금속 소지품·화장품(펄) 제거", "편한 복장 (검사복 제공)"]
   },
   {
-    id: "wb-mri-plus", modality: "MRI", tier: "plus",
+    id: "wb-mri-plus", img: "img/wholebody-mri.jpg", imgPos: "50% 35%", modality: "MRI", tier: "plus",
     name: "전신 MRI 플러스", en: "Whole Body MRI Plus",
     duration: 90, price: 3290000, radiation: "없음",
     tag: "가장 정밀",
@@ -31,7 +31,7 @@ const SCANS = [
     prep: ["검사 4시간 전부터 금식", "금속 소지품 제거", "폐소공포증이 있으면 사전 알림"]
   },
   {
-    id: "brain-mri", modality: "MRI", tier: "focus",
+    id: "brain-mri", img: "img/brain-mri.jpg", imgPos: "50% 50%", modality: "MRI", tier: "focus",
     name: "뇌 MRI + MRA", en: "Brain MRI & MRA",
     duration: 30, price: 690000, radiation: "없음",
     tag: "",
@@ -41,7 +41,7 @@ const SCANS = [
     prep: ["금식 불필요", "금속 소지품 제거"]
   },
   {
-    id: "ldct", modality: "CT", tier: "focus",
+    id: "ldct", img: "img/chest-ct.jpg", imgPos: "50% 50%", modality: "CT", tier: "focus",
     name: "저선량 폐 CT", en: "Low-Dose Chest CT",
     duration: 10, price: 190000, radiation: "약 1 mSv",
     tag: "흡연자 추천",
@@ -51,7 +51,7 @@ const SCANS = [
     prep: ["금식 불필요", "상의 금속 제거"]
   },
   {
-    id: "cac", modality: "CT", tier: "focus",
+    id: "cac", img: "img/chest-ct.jpg", imgPos: "60% 55%", modality: "CT", tier: "focus",
     name: "관상동맥 석회화 CT", en: "Coronary Calcium Score",
     duration: 10, price: 220000, radiation: "약 1 mSv",
     tag: "",
@@ -61,7 +61,7 @@ const SCANS = [
     prep: ["검사 전 카페인 섭취 자제", "조영제 사용 없음"]
   },
   {
-    id: "ccta", modality: "CT", tier: "focus",
+    id: "ccta", img: "img/chest-ct.jpg", imgPos: "55% 60%", modality: "CT", tier: "focus",
     name: "관상동맥 CT 혈관조영", en: "Coronary CT Angiography",
     duration: 20, price: 450000, radiation: "약 3–5 mSv",
     tag: "",
@@ -71,7 +71,7 @@ const SCANS = [
     prep: ["검사 4시간 전 금식", "조영제 알레르기·신장 질환 여부 사전 확인", "카페인 자제"]
   },
   {
-    id: "petct", modality: "PETCT", tier: "core",
+    id: "petct", img: "img/pet-mip.jpg", imgPos: "50% 25%", modality: "PETCT", tier: "core",
     name: "전신 PET-CT", en: "Whole Body PET-CT",
     duration: 120, price: 1690000, radiation: "약 7–10 mSv",
     tag: "암 정밀",
