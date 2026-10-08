@@ -130,9 +130,14 @@ function initHome() {
     CT: { time: "10–20분", best: "폐결절, 관상동맥 석회화·협착", items: ["폐암 선별(저선량)", "심혈관 위험도 수치화", "짧은 검사 시간"] },
     PETCT: { time: "약 2시간", best: "대사 활성이 높은 종양 탐지", items: ["전신 암 스크리닝", "림프절·전이 의심 소견", "가족력이 높은 경우 권장"] }
   };
+  const modImg = { MRI: ["img/brain-mri.jpg", "50% 45%"], CT: ["img/chest-ct.jpg", "50% 50%"], PETCT: ["img/pet-mip.jpg", "50% 6%"] };
   $("#mod-grid").innerHTML = Object.entries(MODALITIES).map(([k, m]) => `
-    <article class="mod-card">
-      ${modChip(k)}
+    <article class="mod-card reveal">
+      <div class="mod-img ${k === "PETCT" ? "light" : ""}">
+        <img src="${modImg[k][0]}" alt="${m.name} 예시 영상" loading="lazy" style="object-position:${modImg[k][1]}">
+        ${modChip(k)}
+      </div>
+      <div class="mod-body">
       <h3>${m.name}<span class="muted" style="font-size:15px;font-weight:500;margin-left:8px">${m.full}</span></h3>
       <dl>
         <dt>검사 시간</dt><dd>${modInfo[k].time}</dd>
@@ -143,19 +148,21 @@ function initHome() {
       <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:6px;padding-top:8px">
         ${SCANS.filter(s => s.modality === k).map(s => `<a class="chip plain" href="book.html?scan=${s.id}">${s.name} · ${won(s.price)}</a>`).join("")}
       </div>
+      </div>
     </article>`).join("");
 
   // 패키지
   $("#pkg-grid").innerHTML = PACKAGES.map(p => {
     const { sum, final } = priceOf(p.scans, p.discount);
     return `
-    <article class="pkg ${p.featured ? "featured" : ""}">
+    <article class="pkg reveal ${p.featured ? "featured" : ""}">
       ${p.featured ? `<span class="badge">가장 많이 선택</span>` : ""}
       <span class="en muted">${p.en}</span>
       <h3>${p.name}</h3>
       <p class="muted" style="font-size:15px;margin-top:6px">${p.desc}</p>
       <div class="price">${won(final)}${p.discount ? `<s>${won(sum)}</s>` : ""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${modalitiesOf(p.scans).map(modChip).join("")}</div>
+      <div class="pkg-thumbs">${p.scans.map(id => scanById(id)).map(sc => `<img src="${sc.img}" alt="" loading="lazy" style="object-position:${sc.imgPos}" title="${sc.name}">`).join("")}</div>
       <ul>${p.perks.map(x => `<li>${x}</li>`).join("")}</ul>
       <a href="book.html?pkg=${p.id}" class="btn ${p.featured ? "btn-accent" : "btn-primary"}">이 패키지로 예약</a>
     </article>`;
@@ -207,12 +214,16 @@ function initCenters() {
     $("#count").textContent = `검색 결과 ${list.length}곳`;
     $("#center-grid").innerHTML = list.length ? list.map(c => `
       <article class="center">
+        <div class="center-visual">
+          <img src="${centerImg(c)}" alt="" loading="lazy">
+          <span>${esc(c.region)} · ${esc(c.district)}</span>
+          ${c.flagship ? `<span class="flag">직영 플래그십</span>` : ""}
+        </div>
         <div class="center-top">
           <div>
             <h3>${esc(c.name)}</h3>
             <p class="addr">${esc(c.address)}</p>
           </div>
-          ${c.flagship ? `<span class="flag">직영 플래그십</span>` : ""}
         </div>
         <div class="row">${c.modalities.map(modChip).join("")}</div>
         <div class="meta">
@@ -227,6 +238,11 @@ function initCenters() {
       </article>`).join("") : `<div class="empty" style="grid-column:1/-1">조건에 맞는 제휴 병원이 없습니다. 필터를 조정해 보세요.</div>`;
   }
   render();
+}
+
+function centerImg(c) {
+  const pool = ["img/spine-mri.jpg", "img/brain-mri.jpg", "img/chest-ct.jpg", "img/wholebody-mri.jpg"];
+  return pool[CENTERS.indexOf(c) % pool.length];
 }
 
 function showCenter(id) {
@@ -307,6 +323,7 @@ function initBook() {
           ${SCANS.map(s => `
             <label class="scan-item ${S.scans.has(s.id) ? "on" : ""}">
               <input type="checkbox" data-scan="${s.id}" ${S.scans.has(s.id) ? "checked" : ""}>
+              <img class="thumb" src="${s.img}" alt="" loading="lazy" style="object-position:${s.imgPos}${s.modality === "PETCT" ? ";background:#fff" : ""}">
               <div>
                 <div class="t">${s.name} ${modChip(s.modality)} ${s.tag ? `<span class="chip plain">${s.tag}</span>` : ""}</div>
                 <div class="d">${s.summary}</div>
@@ -326,7 +343,7 @@ function initBook() {
         <h4>추가 옵션</h4>
         <div class="scan-list">
           ${ADDONS.map(a => `
-            <label class="scan-item ${S.addons.has(a.id) ? "on" : ""}">
+            <label class="scan-item addon ${S.addons.has(a.id) ? "on" : ""}">
               <input type="checkbox" data-addon="${a.id}" ${S.addons.has(a.id) ? "checked" : ""}>
               <div><div class="t" style="font-size:15px">${a.name}</div></div>
               <span class="p">+${won(a.price)}</span>
@@ -625,4 +642,14 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHeader(page);
   renderFooter();
   ({ home: initHome, centers: initCenters, book: initBook }[page] || (() => {}))();
+  initReveal();
 });
+
+function initReveal() {
+  const els = $$(".reveal");
+  if (!("IntersectionObserver" in window)) return els.forEach(e => e.classList.add("in"));
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+  }), { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+  els.forEach((e, i) => { e.style.transitionDelay = `${(i % 4) * 70}ms`; io.observe(e); });
+}
