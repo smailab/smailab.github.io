@@ -281,6 +281,9 @@ body.mini .side-group { border: 0; }
   body.mini .side-group:not(:first-child), body.mini .side-foot { display: block; }
 }
 @media (max-width: 680px) {
+  /* 카테고리 칩: 가로 스크롤 대신 화면 폭에 맞춰 여러 줄로 감김 */
+  .chips { position: static; flex-wrap: wrap; overflow: visible; gap: 6px; padding: 12px 0 4px; }
+  .chip { height: 32px; padding: 0 10px; font-size: 13px; display: inline-flex; align-items: center; }
   .topbar { padding: 0 8px; gap: 4px; }
   .search { display: none; }
   body.searching .search { display: flex; position: absolute; left: 8px; right: 8px; top: 8px; max-width: none; background: var(--bg); }
@@ -300,3 +303,8 @@ body.mini .side-group { border: 0; }
   .channel-head h1 { font-size: 24px; }
   .row2 { grid-template-columns: 1fr; }
 }
+@media (max-width: 380px) {
+  .chips { gap: 5px; }
+  .chip { height: 30px; padding: 0 8px; font-size: 12px; letter-spacing: -.2px; }
+}
+
