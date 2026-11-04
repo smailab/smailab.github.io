@@ -11,7 +11,7 @@
   const GRAD = {
     aging: ["#3b2a8f", "#7b5cff"], mito: ["#7a3d00", "#ffb020"],
     metabolism: ["#2f7d1f", "#9bd24a"], gut: ["#8a2f5b", "#f07aa8"], sleep: ["#14204d", "#4a6ad8"],
-    heart: ["#8f1330", "#ff4f6d"], mental: ["#5b1d7a", "#d05ce3"], prevention: ["#7a1010", "#e0574a"],
+    heart: ["#8f1330", "#ff4f6d"], mental: ["#5b1d7a", "#d05ce3"], prevention: ["#7a1010", "#e0574a"], cancer: ["#1f4e79", "#5aa9e6"],
     bluezones: ["#0d4a35", "#3fbf7f"]
   };
 
