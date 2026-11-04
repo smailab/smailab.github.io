@@ -1,0 +1,339 @@
+(function () {
+  "use strict";
+
+  /* ── 저장소 (localStorage, 실패해도 동작) */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("lt-" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("lt-" + k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  const CAT = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+  const GRAD = {
+    aging: ["#3b2a8f", "#7b5cff"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
+    fasting: ["#8a5a00", "#f2b632"], sleep: ["#14204d", "#4a6ad8"], heart: ["#8f1330", "#ff4f6d"],
+    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], biomarkers: ["#7a1010", "#e0574a"],
+    mind: ["#1f5a50", "#5ec9a8"], bluezones: ["#0d4a35", "#3fbf7f"]
+  };
+
+  const $ = s => document.querySelector(s);
+  const app = $("#app");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function allVideos() {
+    const mine = store.get("mine", []).map(v => Object.assign({ mine: true }, v));
+    return mine.concat(VIDEOS);
+  }
+  const byId = id => allVideos().find(v => v.id === id);
+
+  /* ── 상태 */
+  let liked = new Set(store.get("liked", []));
+  let saved = store.get("saved", []);
+  let history = store.get("history", []);
+  let sort = store.get("sort", "pick");
+
+  /* ── 공통 렌더 조각 */
+  function hue(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+  function avatar(name, cls = "") {
+    const n = name || "?";
+    return `<span class="avatar ${cls}" style="background:hsl(${hue(n)} 45% 42%)" aria-hidden="true">${esc(n.trim()[0].toUpperCase())}</span>`;
+  }
+  function genThumb(v) {
+    const g = GRAD[v.cat] || ["#334", "#667"];
+    const c = CAT[v.cat];
+    return `<div class="gen" style="background:linear-gradient(135deg,${g[0]},${g[1]})">
+      <span class="gen-icon" aria-hidden="true">${c ? c.icon : "▶"}</span>
+      <span class="gen-cat">${esc(c ? c.name : "LONGEVITY")}</span>
+      <span class="gen-title">${esc(v.title)}</span></div>`;
+  }
+  function thumb(v) {
+    const inner = v.yt
+      ? `<img src="https://i.ytimg.com/vi/${esc(v.yt)}/hqdefault.jpg" alt="" loading="lazy">`
+      : genThumb(v);
+    const badge = v.dur ? `<span class="badge">${esc(v.dur)}</span>` : (v.yt ? "" : `<span class="badge">검색 연결</span>`);
+    return `<a class="thumb" href="#/v/${encodeURIComponent(v.id)}">${inner}<span class="badge left">${esc(v.level || "입문")}</span>${badge}</a>`;
+  }
+  const speakerLink = s => `<a href="#/s/${encodeURIComponent(s)}">${esc(s)}</a>`;
+  function relDate(d) {
+    if (!d) return "";
+    const days = Math.floor((Date.now() - new Date(d + "T00:00:00")) / 864e5);
+    if (days < 1) return "오늘";
+    if (days < 7) return days + "일 전";
+    if (days < 30) return Math.floor(days / 7) + "주 전";
+    if (days < 365) return Math.floor(days / 30) + "개월 전";
+    return Math.floor(days / 365) + "년 전";
+  }
+  function card(v) {
+    const sp = v.speaker || "알 수 없음";
+    return `<article class="card">${thumb(v)}
+      <div class="meta">${avatar(sp)}
+        <div class="meta-body">
+          <h3 class="title"><a href="#/v/${encodeURIComponent(v.id)}" title="${esc(v.title)}">${esc(v.title)}</a></h3>
+          <div class="sub">${speakerLink(sp)}</div>
+          <div class="sub">${esc(CAT[v.cat] ? CAT[v.cat].name : "")} · ${relDate(v.date)}${liked.has(v.id) ? " · ♥" : ""}${v.mine ? " · 내가 추가" : ""}</div>
+        </div></div></article>`;
+  }
+  function grid(list, emptyMsg) {
+    if (!list.length) return `<div class="empty"><div class="big">🌱</div>${emptyMsg || "영상이 없습니다."}</div>`;
+    return `<div class="grid">${list.map(card).join("")}</div>`;
+  }
+  function sorted(list) {
+    const l = list.slice();
+    if (sort === "new") l.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    if (sort === "liked") l.sort((a, b) => (liked.has(b.id) ? 1 : 0) - (liked.has(a.id) ? 1 : 0));
+    return l;
+  }
+  function sortBar(title) {
+    const opt = [["pick", "추천순"], ["new", "최신순"], ["liked", "좋아요 먼저"]];
+    return `<div class="toolbar"><h1>${title}</h1><div class="seg" role="group" aria-label="정렬">${opt.map(([k, n]) =>
+      `<button data-sort="${k}" class="${sort === k ? "active" : ""}" aria-pressed="${sort === k}">${n}</button>`).join("")}</div></div>`;
+  }
+  function chips(active) {
+    return `<div class="chips" role="tablist">
+      <a class="chip ${!active ? "active" : ""}" href="#/">전체</a>
+      ${CATEGORIES.map(c => `<a class="chip ${active === c.id ? "active" : ""}" href="#/c/${c.id}">${c.name}</a>`).join("")}</div>`;
+  }
+
+  /* ── 사이드바 */
+  function speakers() {
+    const m = new Map();
+    allVideos().forEach(v => { if (v.speaker) m.set(v.speaker, (m.get(v.speaker) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(e => e[0]);
+  }
+  function renderSidebar(route) {
+    const link = (href, ico, label, key) =>
+      `<a class="side-link ${route === key ? "active" : ""}" href="${href}"><span class="ico" aria-hidden="true">${ico}</span><span>${label}</span></a>`;
+    $("#sidebar").innerHTML = `
+      <div class="side-group">
+        ${link("#/", "🏠", "홈", "home")}
+        ${link("#/new", "✨", "최근 추가", "new")}
+        ${link("#/saved", "🔖", "나중에 볼 영상", "saved")}
+        ${link("#/history", "🕘", "시청 기록", "history")}
+        ${link("#/liked", "♥", "좋아요 표시한 영상", "liked")}
+      </div>
+      <div class="side-group"><div class="side-title">카테고리</div>
+        ${CATEGORIES.map(c => link("#/c/" + c.id, c.icon, c.name, "c:" + c.id)).join("")}
+      </div>
+      <div class="side-group"><div class="side-title">연사 · 채널</div>
+        ${speakers().slice(0, 14).map(s => `<a class="side-link ${route === "s:" + s ? "active" : ""}" href="#/s/${encodeURIComponent(s)}">${avatar(s)}<span>${esc(s)}</span></a>`).join("")}
+      </div>
+      <div class="side-foot">LongeviTube는 장수·건강수명 관련 영상을 모은 큐레이션 사이트입니다. 영상 내용은 의학적 진단·치료를 대신하지 않습니다.<br><br>© LongeviTube</div>`;
+  }
+
+  /* ── 페이지 */
+  function pageHome() {
+    const vids = allVideos();
+    const banner = `<section class="banner">
+      <div><h2>오래 사는 것보다, 건강하게 오래</h2>
+      <p>노화 과학부터 운동·영양·수면·뇌 건강까지. 건강수명(healthy lifespan)을 늘리는 데 도움이 되는 강의와 인터뷰를 주제별로 모았습니다.</p></div>
+      <div class="banner-stats"><div><b>${vids.length}</b><span>영상</span></div><div><b>${CATEGORIES.length}</b><span>주제</span></div><div><b>${speakers().length}</b><span>연사·채널</span></div></div>
+    </section>`;
+    return chips() + banner + sortBar("모든 영상") + grid(sorted(vids));
+  }
+  function pageCat(id) {
+    const c = CAT[id];
+    if (!c) return notFound();
+    return chips(id) + sortBar(`${c.icon} ${c.name}`) + grid(sorted(allVideos().filter(v => v.cat === id)));
+  }
+  function pageNew() {
+    const l = allVideos().slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return `<div class="toolbar" style="margin-top:20px"><h1>✨ 최근 추가된 영상</h1></div>` + grid(l);
+  }
+  function pageList(title, ids, emptyMsg, clearKey) {
+    const l = ids.map(byId).filter(Boolean);
+    const clear = clearKey && l.length ? `<button class="link-btn" data-clear="${clearKey}">모두 지우기</button>` : "";
+    return `<div class="toolbar" style="margin-top:20px"><h1>${title}</h1>${clear}</div>` + grid(l, emptyMsg);
+  }
+  function pageSpeaker(name) {
+    const l = allVideos().filter(v => v.speaker === name);
+    if (!l.length) return notFound();
+    const cats = [...new Set(l.map(v => CAT[v.cat] && CAT[v.cat].name).filter(Boolean))];
+    return `<section class="channel-head">${avatar(name)}<div><h1>${esc(name)}</h1>
+      <div class="sub">영상 ${l.length}개 · ${esc(cats.join(", "))}</div>
+      <div class="sub"><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(name)}" target="_blank" rel="noopener">유튜브에서 더 찾아보기 ↗</a></div></div></section>` + grid(sorted(l));
+  }
+  function pageSearch(q) {
+    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const hay = v => [v.title, v.desc, v.speaker, CAT[v.cat] && CAT[v.cat].name, (v.tags || []).join(" "), (v.points || []).join(" ")].join(" ").toLowerCase();
+    const l = allVideos().filter(v => terms.every(t => hay(v).includes(t)));
+    return `<div class="toolbar" style="margin-top:20px"><h1>‘${esc(q)}’ 검색 결과 ${l.length}개</h1></div>` +
+      grid(l, `일치하는 영상이 없습니다.<br><br><a class="pill" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q + " longevity")}" target="_blank" rel="noopener">유튜브에서 ‘${esc(q)}’ 검색 ↗</a>`);
+  }
+  function pageWatch(id) {
+    const v = byId(id);
+    if (!v) return notFound();
+    history = [id].concat(history.filter(x => x !== id)).slice(0, 60);
+    store.set("history", history);
+
+    const sp = v.speaker || "알 수 없음";
+    const ytSearch = "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.q || v.title);
+    const player = v.yt
+      ? `<div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.yt)}?rel=0" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : `<div class="player">${genThumb(v)}<div class="player-cta"><a href="${ytSearch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z"/></svg>유튜브에서 영상 찾아보기</a></div></div>`;
+
+    const related = allVideos().filter(x => x.id !== id)
+      .map(x => ({ x, s: (x.cat === v.cat ? 3 : 0) + (x.speaker === v.speaker ? 2 : 0) + (x.tags || []).filter(t => (v.tags || []).includes(t)).length }))
+      .sort((a, b) => b.s - a.s).slice(0, 14).map(r => r.x);
+
+    const notes = store.get("notes", {})[id] || "";
+    const isSaved = saved.includes(id), isLiked = liked.has(id);
+
+    return `<div class="watch">
+      <div>
+        ${player}
+        <h1>${esc(v.title)}</h1>
+        <div class="watch-bar">
+          <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(CAT[v.cat] ? CAT[v.cat].icon + " " + CAT[v.cat].name : "")}</span></div></div>
+          <div class="actions">
+            <button class="pill ${isLiked ? "on" : ""}" data-act="like" aria-pressed="${isLiked}"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>좋아요</button>
+            <button class="pill ${isSaved ? "on" : ""}" data-act="save" aria-pressed="${isSaved}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${isSaved ? "저장됨" : "나중에 보기"}</button>
+            <button class="pill" data-act="share"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7M21 12H9a6 6 0 00-6 6"/></svg>공유</button>
+            ${v.mine ? `<button class="pill" data-act="delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>삭제</button>` : ""}
+          </div>
+        </div>
+        <div class="descbox">
+          <div class="sub"><b>${esc(v.level || "입문")}</b> · 등록 ${esc(v.date || "")} ${v.yt ? "" : "· 유튜브 검색 연결"}</div>
+          ${v.desc ? `<p>${esc(v.desc)}</p>` : ""}
+          ${v.points && v.points.length ? `<ul class="points">${v.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+          ${v.tags && v.tags.length ? `<div class="tags">${v.tags.map(t => `<a href="#/search/${encodeURIComponent(t)}">#${esc(t)}</a>`).join("")}</div>` : ""}
+          <div class="notice">※ 교육용 정보입니다. 약물·보충제 복용이나 식단·운동 변화는 의료진과 상의하세요.</div>
+        </div>
+        <section class="notes">
+          <h3>📝 내 메모</h3>
+          <textarea id="noteBox" placeholder="이 영상에서 기억할 내용이나 실천할 점을 적어보세요. (이 브라우저에만 저장)">${esc(notes)}</textarea>
+          <div class="sub" id="noteState"></div>
+        </section>
+      </div>
+      <aside class="related" aria-label="관련 영상">
+        ${related.map(r => `<article class="rel">${thumb(r)}<div><h3 class="title"><a href="#/v/${encodeURIComponent(r.id)}">${esc(r.title)}</a></h3>
+          <div class="sub">${speakerLink(r.speaker || "알 수 없음")}</div><div class="sub">${esc(CAT[r.cat] ? CAT[r.cat].name : "")} · ${relDate(r.date)}</div></div></article>`).join("")}
+      </aside></div>`;
+  }
+  function notFound() {
+    return `<div class="empty"><div class="big">🔍</div>페이지를 찾을 수 없습니다.<br><br><a class="pill" href="#/">홈으로</a></div>`;
+  }
+
+  /* ── 라우터 */
+  function route() {
+    const parts = location.hash.replace(/^#\/?/, "").split("/");
+    const [p, ...rest] = parts;
+    const arg = decodeURIComponent(rest.join("/") || "");
+    let html, key = "";
+    switch (p) {
+      case "": html = pageHome(); key = "home"; break;
+      case "c": html = pageCat(arg); key = "c:" + arg; break;
+      case "s": html = pageSpeaker(arg); key = "s:" + arg; break;
+      case "v": html = pageWatch(arg); break;
+      case "new": html = pageNew(); key = "new"; break;
+      case "saved": html = pageList("🔖 나중에 볼 영상", saved, "‘나중에 보기’를 누른 영상이 여기에 모입니다."); key = "saved"; break;
+      case "history": html = pageList("🕘 시청 기록", history, "아직 시청한 영상이 없습니다.", "history"); key = "history"; break;
+      case "liked": html = pageList("♥ 좋아요 표시한 영상", [...liked], "좋아요를 누른 영상이 여기에 모입니다."); key = "liked"; break;
+      case "search": html = pageSearch(arg); $("#searchInput").value = arg; break;
+      default: html = notFound();
+    }
+    app.innerHTML = html;
+    renderSidebar(key);
+    document.body.classList.remove("drawer", "searching");
+    window.scrollTo(0, 0);
+    const v = p === "v" && byId(arg);
+    document.title = v ? v.title + " - LongeviTube" : "LongeviTube | 장수 · 건강수명 영상 큐레이션";
+    if (p === "v") bindNotes(arg);
+  }
+
+  function bindNotes(id) {
+    const box = $("#noteBox"); if (!box) return;
+    let t;
+    box.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const n = store.get("notes", {}); n[id] = box.value; store.set("notes", n);
+        $("#noteState").textContent = "저장됨 · " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+      }, 400);
+    });
+  }
+
+  function toast(msg) {
+    const el = $("#toast"); el.textContent = msg; el.classList.add("show");
+    clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  /* ── 이벤트 */
+  app.addEventListener("click", e => {
+    const s = e.target.closest("[data-sort]");
+    if (s) { sort = s.dataset.sort; store.set("sort", sort); route(); return; }
+    const c = e.target.closest("[data-clear]");
+    if (c) { history = []; store.set("history", []); route(); return; }
+    const a = e.target.closest("[data-act]");
+    if (!a) return;
+    const id = decodeURIComponent(location.hash.replace(/^#\/v\//, ""));
+    const act = a.dataset.act;
+    if (act === "like") {
+      liked.has(id) ? liked.delete(id) : liked.add(id);
+      store.set("liked", [...liked]); toast(liked.has(id) ? "좋아요 표시한 영상에 추가했습니다" : "좋아요를 취소했습니다");
+    } else if (act === "save") {
+      saved = saved.includes(id) ? saved.filter(x => x !== id) : [id].concat(saved);
+      store.set("saved", saved); toast(saved.includes(id) ? "나중에 볼 영상에 저장했습니다" : "저장을 취소했습니다");
+    } else if (act === "share") {
+      const url = location.href;
+      if (navigator.share) { navigator.share({ title: document.title, url }).catch(() => {}); return; }
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast("링크를 복사했습니다"), () => toast(url));
+      return;
+    } else if (act === "delete") {
+      if (!confirm("내가 추가한 이 영상을 삭제할까요?")) return;
+      store.set("mine", store.get("mine", []).filter(v => v.id !== id));
+      toast("삭제했습니다"); location.hash = "#/"; return;
+    }
+    const y = window.scrollY; route(); window.scrollTo(0, y);
+  });
+
+  $("#searchForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const q = $("#searchInput").value.trim();
+    if (q) location.hash = "#/search/" + encodeURIComponent(q);
+  });
+  $("#searchToggle").addEventListener("click", () => { document.body.classList.add("searching"); $("#searchInput").focus(); });
+  $("#searchInput").addEventListener("blur", () => setTimeout(() => document.body.classList.remove("searching"), 150));
+
+  $("#menuBtn").addEventListener("click", () => {
+    if (window.innerWidth <= 960) document.body.classList.toggle("drawer");
+    else document.body.classList.toggle("mini");
+  });
+  $("#scrim").addEventListener("click", () => document.body.classList.remove("drawer"));
+
+  $("#themeBtn").addEventListener("click", () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("lt-theme", root.dataset.theme); } catch (e) {}
+  });
+
+  /* ── 영상 추가 */
+  const dlg = $("#addDialog");
+  $("#addCat").innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join("");
+  $("#addBtn").addEventListener("click", () => { $("#addForm").reset(); $("#addError").hidden = true; dlg.showModal(); });
+  function parseYt(url) {
+    const m = String(url).trim().match(/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/) || String(url).trim().match(/^([A-Za-z0-9_-]{11})$/);
+    return m ? m[1] : null;
+  }
+  $("#addForm").addEventListener("submit", e => {
+    if (e.submitter && e.submitter.value === "cancel") return;
+    const f = new FormData(e.target);
+    const yt = parseYt(f.get("url"));
+    if (!yt) { e.preventDefault(); const er = $("#addError"); er.textContent = "유튜브 링크에서 영상 ID를 찾지 못했습니다."; er.hidden = false; return; }
+    const v = {
+      id: "my-" + yt, yt, cat: f.get("cat"), level: f.get("level"),
+      title: f.get("title").trim(), speaker: f.get("speaker").trim() || "내 큐레이션",
+      desc: f.get("desc").trim(), points: f.get("points").split("\n").map(s => s.trim()).filter(Boolean),
+      date: new Date().toISOString().slice(0, 10), tags: []
+    };
+    store.set("mine", [v].concat(store.get("mine", []).filter(x => x.id !== v.id)));
+    toast("영상을 추가했습니다");
+    location.hash = "#/v/" + v.id;
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $("#searchInput").focus(); }
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
+})();
