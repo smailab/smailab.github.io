@@ -29,7 +29,8 @@
   let liked = new Set(store.get("liked", []));
   let saved = store.get("saved", []);
   let history = store.get("history", []);
-  let sort = store.get("sort", "pick");
+  let sort = store.get("sort", "pop");
+  if (!["pop", "liked", "title"].includes(sort)) sort = "pop";
 
   /* ── 공통 렌더 조각 */
   function hue(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
@@ -47,21 +48,12 @@
   }
   function thumb(v) {
     const inner = v.yt
-      ? `<img src="https://i.ytimg.com/vi/${esc(v.yt)}/hqdefault.jpg" alt="" loading="lazy">`
+      ? genThumb(v) + `<img src="https://i.ytimg.com/vi/${esc(v.yt)}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">`
       : genThumb(v);
-    const badge = v.dur ? `<span class="badge">${esc(v.dur)}</span>` : (v.yt ? "" : `<span class="badge">검색 연결</span>`);
+    const badge = v.format ? `<span class="badge">${esc(v.format)}</span>` : (v.yt ? "" : `<span class="badge">검색 연결</span>`);
     return `<a class="thumb" href="#/v/${encodeURIComponent(v.id)}">${inner}<span class="badge left">${esc(v.level || "입문")}</span>${badge}</a>`;
   }
   const speakerLink = s => `<a href="#/s/${encodeURIComponent(s)}">${esc(s)}</a>`;
-  function relDate(d) {
-    if (!d) return "";
-    const days = Math.floor((Date.now() - new Date(d + "T00:00:00")) / 864e5);
-    if (days < 1) return "오늘";
-    if (days < 7) return days + "일 전";
-    if (days < 30) return Math.floor(days / 7) + "주 전";
-    if (days < 365) return Math.floor(days / 30) + "개월 전";
-    return Math.floor(days / 365) + "년 전";
-  }
   function card(v) {
     const sp = v.speaker || "알 수 없음";
     return `<article class="card">${thumb(v)}
@@ -69,7 +61,7 @@
         <div class="meta-body">
           <h3 class="title"><a href="#/v/${encodeURIComponent(v.id)}" title="${esc(v.title)}">${esc(v.title)}</a></h3>
           <div class="sub">${speakerLink(sp)}</div>
-          <div class="sub">${esc(CAT[v.cat] ? CAT[v.cat].name : "")} · ${relDate(v.date)}${liked.has(v.id) ? " · ♥" : ""}${v.mine ? " · 내가 추가" : ""}</div>
+          <div class="sub">${esc(v.channel || (CAT[v.cat] ? CAT[v.cat].name : ""))}${liked.has(v.id) ? " · ♥" : ""}${v.mine ? " · 내가 추가" : ""}</div>
         </div></div></article>`;
   }
   function grid(list, emptyMsg) {
@@ -78,12 +70,12 @@
   }
   function sorted(list) {
     const l = list.slice();
-    if (sort === "new") l.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    if (sort === "title") l.sort((a, b) => a.title.localeCompare(b.title, "ko"));
     if (sort === "liked") l.sort((a, b) => (liked.has(b.id) ? 1 : 0) - (liked.has(a.id) ? 1 : 0));
     return l;
   }
   function sortBar(title) {
-    const opt = [["pick", "추천순"], ["new", "최신순"], ["liked", "좋아요 먼저"]];
+    const opt = [["pop", "인기순"], ["title", "가나다순"], ["liked", "좋아요 먼저"]];
     return `<div class="toolbar"><h1>${title}</h1><div class="seg" role="group" aria-label="정렬">${opt.map(([k, n]) =>
       `<button data-sort="${k}" class="${sort === k ? "active" : ""}" aria-pressed="${sort === k}">${n}</button>`).join("")}</div></div>`;
   }
@@ -105,7 +97,7 @@
     $("#sidebar").innerHTML = `
       <div class="side-group">
         ${link("#/", "🏠", "홈", "home")}
-        ${link("#/new", "✨", "최근 추가", "new")}
+        ${link("#/mine", "➕", "내가 추가한 영상", "mine")}
         ${link("#/saved", "🔖", "나중에 볼 영상", "saved")}
         ${link("#/history", "🕘", "시청 기록", "history")}
         ${link("#/liked", "♥", "좋아요 표시한 영상", "liked")}
@@ -135,8 +127,8 @@
     return chips(id) + sortBar(`${c.icon} ${c.name}`) + grid(sorted(allVideos().filter(v => v.cat === id)));
   }
   function pageNew() {
-    const l = allVideos().slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    return `<div class="toolbar" style="margin-top:20px"><h1>✨ 최근 추가된 영상</h1></div>` + grid(l);
+    const l = allVideos().filter(v => v.mine);
+    return `<div class="toolbar" style="margin-top:20px"><h1>➕ 내가 추가한 영상</h1></div>` + grid(l, "상단의 ‘영상 추가’ 버튼으로 유튜브 영상을 추가해 보세요.");
   }
   function pageList(title, ids, emptyMsg, clearKey) {
     const l = ids.map(byId).filter(Boolean);
@@ -153,7 +145,7 @@
   }
   function pageSearch(q) {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const hay = v => [v.title, v.desc, v.speaker, CAT[v.cat] && CAT[v.cat].name, (v.tags || []).join(" "), (v.points || []).join(" ")].join(" ").toLowerCase();
+    const hay = v => [v.title, v.orig, v.channel, v.desc, v.speaker, CAT[v.cat] && CAT[v.cat].name, (v.tags || []).join(" "), (v.points || []).join(" ")].join(" ").toLowerCase();
     const l = allVideos().filter(v => terms.every(t => hay(v).includes(t)));
     return `<div class="toolbar" style="margin-top:20px"><h1>‘${esc(q)}’ 검색 결과 ${l.length}개</h1></div>` +
       grid(l, `일치하는 영상이 없습니다.<br><br><a class="pill" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q + " longevity")}" target="_blank" rel="noopener">유튜브에서 ‘${esc(q)}’ 검색 ↗</a>`);
@@ -165,7 +157,8 @@
     store.set("history", history);
 
     const sp = v.speaker || "알 수 없음";
-    const ytSearch = "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.q || v.title);
+    const ytSearch = "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.q || v.orig || v.title);
+    const ytWatch = v.yt ? "https://www.youtube.com/watch?v=" + encodeURIComponent(v.yt) : ytSearch;
     const player = v.yt
       ? `<div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.yt)}?rel=0" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
       : `<div class="player">${genThumb(v)}<div class="player-cta"><a href="${ytSearch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z"/></svg>유튜브에서 영상 찾아보기</a></div></div>`;
@@ -182,16 +175,18 @@
         ${player}
         <h1>${esc(v.title)}</h1>
         <div class="watch-bar">
-          <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(CAT[v.cat] ? CAT[v.cat].icon + " " + CAT[v.cat].name : "")}</span></div></div>
+          <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(v.channel ? v.channel : "")}${v.channel && CAT[v.cat] ? " · " : ""}${esc(CAT[v.cat] ? CAT[v.cat].icon + " " + CAT[v.cat].name : "")}</span></div></div>
           <div class="actions">
             <button class="pill ${isLiked ? "on" : ""}" data-act="like" aria-pressed="${isLiked}"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>좋아요</button>
             <button class="pill ${isSaved ? "on" : ""}" data-act="save" aria-pressed="${isSaved}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${isSaved ? "저장됨" : "나중에 보기"}</button>
+            <a class="pill" href="${ytWatch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>유튜브에서 열기</a>
             <button class="pill" data-act="share"><svg viewBox="0 0 24 24"><path d="M14 5l7 7-7 7M21 12H9a6 6 0 00-6 6"/></svg>공유</button>
             ${v.mine ? `<button class="pill" data-act="delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>삭제</button>` : ""}
           </div>
         </div>
         <div class="descbox">
-          <div class="sub"><b>${esc(v.level || "입문")}</b> · 등록 ${esc(v.date || "")} ${v.yt ? "" : "· 유튜브 검색 연결"}</div>
+          <div class="sub"><b>${esc(v.level || "입문")}</b>${v.format ? " · " + esc(v.format) : ""}${v.channel ? " · " + esc(v.channel) : ""}</div>
+          ${v.orig ? `<div class="orig">원제: ${esc(v.orig)}</div>` : ""}
           ${v.desc ? `<p>${esc(v.desc)}</p>` : ""}
           ${v.points && v.points.length ? `<ul class="points">${v.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
           ${v.tags && v.tags.length ? `<div class="tags">${v.tags.map(t => `<a href="#/search/${encodeURIComponent(t)}">#${esc(t)}</a>`).join("")}</div>` : ""}
@@ -205,7 +200,7 @@
       </div>
       <aside class="related" aria-label="관련 영상">
         ${related.map(r => `<article class="rel">${thumb(r)}<div><h3 class="title"><a href="#/v/${encodeURIComponent(r.id)}">${esc(r.title)}</a></h3>
-          <div class="sub">${speakerLink(r.speaker || "알 수 없음")}</div><div class="sub">${esc(CAT[r.cat] ? CAT[r.cat].name : "")} · ${relDate(r.date)}</div></div></article>`).join("")}
+          <div class="sub">${speakerLink(r.speaker || "알 수 없음")}</div><div class="sub">${esc(r.channel || (CAT[r.cat] ? CAT[r.cat].name : ""))}</div></div></article>`).join("")}
       </aside></div>`;
   }
   function notFound() {
@@ -223,7 +218,7 @@
       case "c": html = pageCat(arg); key = "c:" + arg; break;
       case "s": html = pageSpeaker(arg); key = "s:" + arg; break;
       case "v": html = pageWatch(arg); break;
-      case "new": html = pageNew(); key = "new"; break;
+      case "mine": html = pageNew(); key = "mine"; break;
       case "saved": html = pageList("🔖 나중에 볼 영상", saved, "‘나중에 보기’를 누른 영상이 여기에 모입니다."); key = "saved"; break;
       case "history": html = pageList("🕘 시청 기록", history, "아직 시청한 영상이 없습니다.", "history"); key = "history"; break;
       case "liked": html = pageList("♥ 좋아요 표시한 영상", [...liked], "좋아요를 누른 영상이 여기에 모입니다."); key = "liked"; break;
