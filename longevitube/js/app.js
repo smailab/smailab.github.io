@@ -9,9 +9,9 @@
 
   const CAT = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
   const GRAD = {
-    aging: ["#3b2a8f", "#7b5cff"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
+    aging: ["#3b2a8f", "#7b5cff"], mito: ["#7a3d00", "#ffb020"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
     fasting: ["#8a5a00", "#f2b632"], sleep: ["#14204d", "#4a6ad8"], heart: ["#8f1330", "#ff4f6d"],
-    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], biomarkers: ["#7a1010", "#e0574a"],
+    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], prevention: ["#7a1010", "#e0574a"],
     mind: ["#1f5a50", "#5ec9a8"], bluezones: ["#0d4a35", "#3fbf7f"]
   };
 
@@ -24,6 +24,8 @@
     return mine.concat(VIDEOS);
   }
   const byId = id => allVideos().find(v => v.id === id);
+  const catsOf = v => [v.cat].concat(v.cats || []).filter((c, i, a) => CAT[c] && a.indexOf(c) === i);
+  const inCat = (v, id) => catsOf(v).includes(id);
 
   /* ── 상태 */
   let liked = new Set(store.get("liked", []));
@@ -124,7 +126,7 @@
   function pageCat(id) {
     const c = CAT[id];
     if (!c) return notFound();
-    return chips(id) + sortBar(`${c.icon} ${c.name}`) + grid(sorted(allVideos().filter(v => v.cat === id)));
+    return chips(id) + sortBar(`${c.icon} ${c.name}`) + grid(sorted(allVideos().filter(v => inCat(v, id))));
   }
   function pageNew() {
     const l = allVideos().filter(v => v.mine);
@@ -138,14 +140,14 @@
   function pageSpeaker(name) {
     const l = allVideos().filter(v => v.speaker === name);
     if (!l.length) return notFound();
-    const cats = [...new Set(l.map(v => CAT[v.cat] && CAT[v.cat].name).filter(Boolean))];
+    const cats = [...new Set(l.flatMap(v => catsOf(v).map(c => CAT[c].name)))];
     return `<section class="channel-head">${avatar(name)}<div><h1>${esc(name)}</h1>
       <div class="sub">영상 ${l.length}개 · ${esc(cats.join(", "))}</div>
       <div class="sub"><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(name)}" target="_blank" rel="noopener">유튜브에서 더 찾아보기 ↗</a></div></div></section>` + grid(sorted(l));
   }
   function pageSearch(q) {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const hay = v => [v.title, v.orig, v.channel, v.desc, v.speaker, CAT[v.cat] && CAT[v.cat].name, (v.tags || []).join(" "), (v.points || []).join(" ")].join(" ").toLowerCase();
+    const hay = v => [v.title, v.orig, v.channel, v.desc, v.speaker, catsOf(v).map(c => CAT[c].name).join(" "), (v.tags || []).join(" "), (v.points || []).join(" ")].join(" ").toLowerCase();
     const l = allVideos().filter(v => terms.every(t => hay(v).includes(t)));
     return `<div class="toolbar" style="margin-top:20px"><h1>‘${esc(q)}’ 검색 결과 ${l.length}개</h1></div>` +
       grid(l, `일치하는 영상이 없습니다.<br><br><a class="pill" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q + " longevity")}" target="_blank" rel="noopener">유튜브에서 ‘${esc(q)}’ 검색 ↗</a>`);
@@ -164,7 +166,7 @@
       : `<div class="player">${genThumb(v)}<div class="player-cta"><a href="${ytSearch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z"/></svg>유튜브에서 영상 찾아보기</a></div></div>`;
 
     const related = allVideos().filter(x => x.id !== id)
-      .map(x => ({ x, s: (x.cat === v.cat ? 3 : 0) + (x.speaker === v.speaker ? 2 : 0) + (x.tags || []).filter(t => (v.tags || []).includes(t)).length }))
+      .map(x => ({ x, s: (x.cat === v.cat ? 3 : catsOf(x).some(c => catsOf(v).includes(c)) ? 1 : 0) + (x.speaker === v.speaker ? 2 : 0) + (x.tags || []).filter(t => (v.tags || []).includes(t)).length }))
       .sort((a, b) => b.s - a.s).slice(0, 14).map(r => r.x);
 
     const notes = store.get("notes", {})[id] || "";
@@ -175,7 +177,7 @@
         ${player}
         <h1>${esc(v.title)}</h1>
         <div class="watch-bar">
-          <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(v.channel ? v.channel : "")}${v.channel && CAT[v.cat] ? " · " : ""}${esc(CAT[v.cat] ? CAT[v.cat].icon + " " + CAT[v.cat].name : "")}</span></div></div>
+          <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(v.channel ? v.channel : "")}${v.channel && catsOf(v).length ? " · " : ""}${esc(catsOf(v).map(c => CAT[c].icon + " " + CAT[c].name).join(", "))}</span></div></div>
           <div class="actions">
             <button class="pill ${isLiked ? "on" : ""}" data-act="like" aria-pressed="${isLiked}"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>좋아요</button>
             <button class="pill ${isSaved ? "on" : ""}" data-act="save" aria-pressed="${isSaved}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${isSaved ? "저장됨" : "나중에 보기"}</button>
@@ -189,6 +191,7 @@
           ${v.orig ? `<div class="orig">원제: ${esc(v.orig)}</div>` : ""}
           ${v.desc ? `<p>${esc(v.desc)}</p>` : ""}
           ${v.points && v.points.length ? `<ul class="points">${v.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+          <div class="tags">${catsOf(v).map(c => `<a href="#/c/${c}">${CAT[c].icon} ${esc(CAT[c].name)}</a>`).join("")}</div>
           ${v.tags && v.tags.length ? `<div class="tags">${v.tags.map(t => `<a href="#/search/${encodeURIComponent(t)}">#${esc(t)}</a>`).join("")}</div>` : ""}
           <div class="notice">※ 교육용 정보입니다. 약물·보충제 복용이나 식단·운동 변화는 의료진과 상의하세요.</div>
         </div>
