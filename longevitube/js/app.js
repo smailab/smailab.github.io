@@ -9,9 +9,9 @@
 
   const CAT = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
   const GRAD = {
-    aging: ["#3b2a8f", "#7b5cff"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
+    aging: ["#3b2a8f", "#7b5cff"], mito: ["#7a3d00", "#ffb020"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
     fasting: ["#8a5a00", "#f2b632"], sleep: ["#14204d", "#4a6ad8"], heart: ["#8f1330", "#ff4f6d"],
-    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], biomarkers: ["#7a1010", "#e0574a"],
+    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], prevention: ["#7a1010", "#e0574a"],
     mind: ["#1f5a50", "#5ec9a8"], bluezones: ["#0d4a35", "#3fbf7f"]
   };
 
