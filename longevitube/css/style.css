@@ -303,7 +303,7 @@ body.mini .side-group { border: 0; }
   .channel-head h1 { font-size: 24px; }
   .row2 { grid-template-columns: 1fr; }
 }
-@media (max-width: 380px) {
+@media (max-width: 400px) {
   .chips { gap: 5px; }
   .chip { height: 30px; padding: 0 8px; font-size: 12px; letter-spacing: -.2px; }
 }
