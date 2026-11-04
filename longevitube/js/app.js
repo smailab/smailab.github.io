@@ -9,10 +9,10 @@
 
   const CAT = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
   const GRAD = {
-    aging: ["#3b2a8f", "#7b5cff"], mito: ["#7a3d00", "#ffb020"], exercise: ["#b5361c", "#ff8a3d"], nutrition: ["#2f7d1f", "#9bd24a"],
-    fasting: ["#8a5a00", "#f2b632"], sleep: ["#14204d", "#4a6ad8"], heart: ["#8f1330", "#ff4f6d"],
-    brain: ["#5b1d7a", "#d05ce3"], supplements: ["#0b5e6e", "#2ec4d6"], prevention: ["#7a1010", "#e0574a"],
-    mind: ["#1f5a50", "#5ec9a8"], bluezones: ["#0d4a35", "#3fbf7f"]
+    aging: ["#3b2a8f", "#7b5cff"], mito: ["#7a3d00", "#ffb020"],
+    metabolism: ["#2f7d1f", "#9bd24a"], gut: ["#8a2f5b", "#f07aa8"], sleep: ["#14204d", "#4a6ad8"],
+    heart: ["#8f1330", "#ff4f6d"], mental: ["#5b1d7a", "#d05ce3"], prevention: ["#7a1010", "#e0574a"], cancer: ["#1f4e79", "#5aa9e6"],
+    bluezones: ["#0d4a35", "#3fbf7f"]
   };
 
   const $ = s => document.querySelector(s);
@@ -24,7 +24,9 @@
     return mine.concat(VIDEOS);
   }
   const byId = id => allVideos().find(v => v.id === id);
-  const catsOf = v => [v.cat].concat(v.cats || []).filter((c, i, a) => CAT[c] && a.indexOf(c) === i);
+  const ALIAS = typeof CATEGORY_ALIAS === "object" ? CATEGORY_ALIAS : {};
+  const catId = c => ALIAS[c] || c;
+  const catsOf = v => [v.cat].concat(v.cats || []).map(catId).filter((c, i, a) => CAT[c] && a.indexOf(c) === i);
   const inCat = (v, id) => catsOf(v).includes(id);
 
   /* ── 상태 */
@@ -41,8 +43,8 @@
     return `<span class="avatar ${cls}" style="background:hsl(${hue(n)} 45% 42%)" aria-hidden="true">${esc(n.trim()[0].toUpperCase())}</span>`;
   }
   function genThumb(v) {
-    const g = GRAD[v.cat] || ["#334", "#667"];
-    const c = CAT[v.cat];
+    const g = GRAD[catId(v.cat)] || ["#334", "#667"];
+    const c = CAT[catId(v.cat)];
     return `<div class="gen" style="background:linear-gradient(135deg,${g[0]},${g[1]})">
       <span class="gen-icon" aria-hidden="true">${c ? c.icon : "▶"}</span>
       <span class="gen-cat">${esc(c ? c.name : "LONGEVITY")}</span>
@@ -63,7 +65,7 @@
         <div class="meta-body">
           <h3 class="title"><a href="#/v/${encodeURIComponent(v.id)}" title="${esc(v.title)}">${esc(v.title)}</a></h3>
           <div class="sub">${speakerLink(sp)}</div>
-          <div class="sub">${esc(v.channel || (CAT[v.cat] ? CAT[v.cat].name : ""))}${liked.has(v.id) ? " · ♥" : ""}${v.mine ? " · 내가 추가" : ""}</div>
+          <div class="sub">${esc(v.channel || (CAT[catId(v.cat)] ? CAT[catId(v.cat)].name : ""))}${liked.has(v.id) ? " · ♥" : ""}${v.mine ? " · 내가 추가" : ""}</div>
         </div></div></article>`;
   }
   function grid(list, emptyMsg) {
@@ -166,7 +168,7 @@
       : `<div class="player">${genThumb(v)}<div class="player-cta"><a href="${ytSearch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z"/></svg>유튜브에서 영상 찾아보기</a></div></div>`;
 
     const related = allVideos().filter(x => x.id !== id)
-      .map(x => ({ x, s: (x.cat === v.cat ? 3 : catsOf(x).some(c => catsOf(v).includes(c)) ? 1 : 0) + (x.speaker === v.speaker ? 2 : 0) + (x.tags || []).filter(t => (v.tags || []).includes(t)).length }))
+      .map(x => ({ x, s: (catId(x.cat) === catId(v.cat) ? 3 : catsOf(x).some(c => catsOf(v).includes(c)) ? 1 : 0) + (x.speaker === v.speaker ? 2 : 0) + (x.tags || []).filter(t => (v.tags || []).includes(t)).length }))
       .sort((a, b) => b.s - a.s).slice(0, 14).map(r => r.x);
 
     const notes = store.get("notes", {})[id] || "";
@@ -203,7 +205,7 @@
       </div>
       <aside class="related" aria-label="관련 영상">
         ${related.map(r => `<article class="rel">${thumb(r)}<div><h3 class="title"><a href="#/v/${encodeURIComponent(r.id)}">${esc(r.title)}</a></h3>
-          <div class="sub">${speakerLink(r.speaker || "알 수 없음")}</div><div class="sub">${esc(r.channel || (CAT[r.cat] ? CAT[r.cat].name : ""))}</div></div></article>`).join("")}
+          <div class="sub">${speakerLink(r.speaker || "알 수 없음")}</div><div class="sub">${esc(r.channel || (CAT[catId(r.cat)] ? CAT[catId(r.cat)].name : ""))}</div></div></article>`).join("")}
       </aside></div>`;
   }
   function notFound() {
@@ -218,7 +220,9 @@
     let html, key = "";
     switch (p) {
       case "": html = pageHome(); key = "home"; break;
-      case "c": html = pageCat(arg); key = "c:" + arg; break;
+      case "c":
+        if (ALIAS[arg]) { location.replace("#/c/" + ALIAS[arg]); return; }
+        html = pageCat(arg); key = "c:" + arg; break;
       case "s": html = pageSpeaker(arg); key = "s:" + arg; break;
       case "v": html = pageWatch(arg); break;
       case "mine": html = pageNew(); key = "mine"; break;
