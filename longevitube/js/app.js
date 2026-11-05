@@ -28,6 +28,7 @@
   const catId = c => ALIAS[c] || c;
   const catsOf = v => [v.cat].concat(v.cats || []).map(catId).filter((c, i, a) => CAT[c] && a.indexOf(c) === i);
   const inCat = (v, id) => catsOf(v).includes(id);
+  const isKoV = v => (v.tags || []).includes("한국어");
 
   /* ── 상태 */
   let liked = new Set(store.get("liked", []));
@@ -35,7 +36,7 @@
   let history = store.get("history", []);
   let sort = store.get("sort", "pop");
   let koSubs = store.get("koSubs", true); // 한국어 자막 자동 켜기 (기본: 켜짐)
-  if (!["pop", "liked", "title"].includes(sort)) sort = "pop";
+  if (!["pop", "ko", "liked", "title"].includes(sort)) sort = "pop";
 
   /* ── 공통 렌더 조각 */
   function hue(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
@@ -76,11 +77,12 @@
   function sorted(list) {
     const l = list.slice();
     if (sort === "title") l.sort((a, b) => a.title.localeCompare(b.title, "ko"));
+    if (sort === "ko") l.sort((a, b) => (isKoV(b) ? 1 : 0) - (isKoV(a) ? 1 : 0));
     if (sort === "liked") l.sort((a, b) => (liked.has(b.id) ? 1 : 0) - (liked.has(a.id) ? 1 : 0));
     return l;
   }
   function sortBar(title) {
-    const opt = [["pop", "인기순"], ["title", "가나다순"], ["liked", "좋아요 먼저"]];
+    const opt = [["pop", "인기순"], ["ko", "한국어 먼저"], ["title", "가나다순"], ["liked", "좋아요 먼저"]];
     return `<div class="toolbar"><h1>${title}</h1><div class="seg" role="group" aria-label="정렬">${opt.map(([k, n]) =>
       `<button data-sort="${k}" class="${sort === k ? "active" : ""}" aria-pressed="${sort === k}">${n}</button>`).join("")}</div></div>`;
   }
@@ -102,6 +104,7 @@
     $("#sidebar").innerHTML = `
       <div class="side-group">
         ${link("#/", "🏠", "홈", "home")}
+        ${link("#/ko", "🇰🇷", "한국어 영상", "ko")}
         ${link("#/mine", "➕", "내가 추가한 영상", "mine")}
         ${link("#/saved", "🔖", "나중에 볼 영상", "saved")}
         ${link("#/history", "🕘", "시청 기록", "history")}
@@ -163,7 +166,7 @@
 
     const sp = v.speaker || "알 수 없음";
     const ytSearch = "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.q || v.orig || v.title);
-    const isKo = (v.tags || []).includes("한국어");
+    const isKo = isKoV(v);
     const ytWatch = v.yt ? "https://www.youtube.com/watch?v=" + encodeURIComponent(v.yt) : ytSearch;
     const player = v.yt
       ? `<div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.yt)}?rel=0&hl=ko${koSubs && !isKo ? "&cc_load_policy=1&cc_lang_pref=ko" : ""}" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
@@ -238,6 +241,7 @@
       case "s": html = pageSpeaker(arg); key = "s:" + arg; break;
       case "v": html = pageWatch(arg); break;
       case "mine": html = pageNew(); key = "mine"; break;
+      case "ko": html = sortBar("🇰🇷 한국어 영상") + grid(sorted(allVideos().filter(isKoV))); key = "ko"; break;
       case "saved": html = pageList("🔖 나중에 볼 영상", saved, "‘나중에 보기’를 누른 영상이 여기에 모입니다."); key = "saved"; break;
       case "history": html = pageList("🕘 시청 기록", history, "아직 시청한 영상이 없습니다.", "history"); key = "history"; break;
       case "liked": html = pageList("♥ 좋아요 표시한 영상", [...liked], "좋아요를 누른 영상이 여기에 모입니다."); key = "liked"; break;
