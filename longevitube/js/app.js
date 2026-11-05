@@ -34,6 +34,7 @@
   let saved = store.get("saved", []);
   let history = store.get("history", []);
   let sort = store.get("sort", "pop");
+  let koSubs = store.get("koSubs", true); // 한국어 자막 자동 켜기 (기본: 켜짐)
   if (!["pop", "liked", "title"].includes(sort)) sort = "pop";
 
   /* ── 공통 렌더 조각 */
@@ -162,9 +163,10 @@
 
     const sp = v.speaker || "알 수 없음";
     const ytSearch = "https://www.youtube.com/results?search_query=" + encodeURIComponent(v.q || v.orig || v.title);
+    const isKo = (v.tags || []).includes("한국어");
     const ytWatch = v.yt ? "https://www.youtube.com/watch?v=" + encodeURIComponent(v.yt) : ytSearch;
     const player = v.yt
-      ? `<div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.yt)}?rel=0" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      ? `<div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.yt)}?rel=0&hl=ko${koSubs && !isKo ? "&cc_load_policy=1&cc_lang_pref=ko" : ""}" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
       : `<div class="player">${genThumb(v)}<div class="player-cta"><a href="${ytSearch}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z"/></svg>유튜브에서 영상 찾아보기</a></div></div>`;
 
     const related = allVideos().filter(x => x.id !== id)
@@ -177,6 +179,16 @@
     return `<div class="watch">
       <div>
         ${player}
+        ${v.yt && !isKo ? `<div class="langbar">
+          <button class="pill ${koSubs ? "on" : ""}" data-act="subs" aria-pressed="${koSubs}"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4M13 15h4M7 11h2M11 11h6"/></svg>한국어 자막 ${koSubs ? "켜짐" : "꺼짐"}</button>
+          <details class="langhelp"><summary>한국어 자막·더빙이 안 나오나요?</summary>
+            <ol>
+              <li><b>자막이 영어로 나오면:</b> 플레이어 오른쪽 아래 ⚙️ 설정 → <b>자막</b> → <b>자동 번역</b> → <b>한국어</b></li>
+              <li><b>한국어 더빙:</b> 유튜브 자동 더빙을 지원하는 영상만 ⚙️ 설정 → <b>오디오 트랙</b> → <b>한국어</b>가 나옵니다. 메뉴에 없으면 더빙이 없는 영상입니다.</li>
+              <li>휴대폰 유튜브 앱으로 보면(‘유튜브에서 열기’) 앱 언어 설정에 따라 자막·더빙이 더 잘 적용되기도 합니다.</li>
+            </ol>
+          </details>
+        </div>` : ""}
         <h1>${esc(v.title)}</h1>
         <div class="watch-bar">
           <div class="owner">${avatar(sp)}<div><b>${speakerLink(sp)}</b><span class="sub">${esc(v.channel ? v.channel : "")}${v.channel && catsOf(v).length ? " · " : ""}${esc(catsOf(v).map(c => CAT[c].icon + " " + CAT[c].name).join(", "))}</span></div></div>
@@ -274,6 +286,9 @@
     } else if (act === "save") {
       saved = saved.includes(id) ? saved.filter(x => x !== id) : [id].concat(saved);
       store.set("saved", saved); toast(saved.includes(id) ? "나중에 볼 영상에 저장했습니다" : "저장을 취소했습니다");
+    } else if (act === "subs") {
+      koSubs = !koSubs; store.set("koSubs", koSubs);
+      toast(koSubs ? "한국어 자막을 자동으로 켭니다" : "자막 자동 켜기를 껐습니다");
     } else if (act === "share") {
       const url = location.href;
       if (navigator.share) { navigator.share({ title: document.title, url }).catch(() => {}); return; }

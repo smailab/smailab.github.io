@@ -183,6 +183,11 @@ body.mini .side-group { border: 0; }
 }
 .player-cta a:hover { background: #000; }
 .player-cta svg { fill: #fff; stroke: none; }
+.langbar { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.langhelp { flex: 1; min-width: 220px; font-size: 13px; color: var(--muted); }
+.langhelp summary { cursor: pointer; padding: 8px 0; color: var(--accent-ink); font-weight: 500; }
+.langhelp ol { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.langhelp b { color: var(--text); }
 .watch h1 { font-size: 20px; margin: 12px 0 8px; line-height: 1.4; }
 .watch-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .owner { display: flex; align-items: center; gap: 12px; }
