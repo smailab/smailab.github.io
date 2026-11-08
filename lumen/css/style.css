@@ -495,6 +495,27 @@ body.on-dark .header:not(.scrolled) .menu-btn { color: #fff; }
 .center-visual span { position: absolute; left: 20px; bottom: 14px; color: #fff; font-size: 12px; letter-spacing: .14em; font-weight: 700; }
 .center-visual .flag { left: auto; right: 16px; top: 14px; bottom: auto; letter-spacing: 0; }
 
+/* LongeviTube 연동 */
+.nav-tag { font-size: 9px; font-weight: 800; letter-spacing: .06em; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 4px; margin-left: 4px; vertical-align: 6px; }
+.mod-video { font-size: 14px; font-weight: 600; color: var(--accent); padding-top: 4px; }
+.mod-video:hover { text-decoration: underline; text-underline-offset: 3px; }
+.vtabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.vtabs button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .2s; }
+.vtabs button:hover { border-color: var(--ink); }
+.vtabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.vgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.vcard { display: flex; flex-direction: column; gap: 10px; }
+.vthumb { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #0d1420; }
+.vthumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
+.vcard:hover .vthumb img { transform: scale(1.04); }
+.vthumb i { position: absolute; inset: 0; margin: auto; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(13,20,32,.62); color: #fff; font-style: normal; font-size: 16px; backdrop-filter: blur(6px); opacity: 0; transition: opacity .25s; }
+.vcard:hover .vthumb i { opacity: 1; }
+.vcard b { font-size: 15px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vcard small { font-size: 13px; color: var(--muted); }
+.vmore { display: flex; gap: 10px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
+@media (max-width: 1000px) { .vgrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 760px) { .vgrid { gap: 14px; } .vcard b { font-size: 14px; } }
+
 /* reveal */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
 .reveal.in { opacity: 1; transform: none; }

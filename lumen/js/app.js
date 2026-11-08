@@ -4,6 +4,9 @@
 
 const BRAND = { name: "LUMEN", ko: "루멘", tel: "1600-0000", email: "care@lumen.example" };
 const STORE_KEY = "lumen_reservations";
+const LONGEVITUBE = "../longevitube/";
+/* 검사 장비 → 관련 LongeviTube 카테고리 */
+const MOD_VIDEO_CAT = { MRI: ["prevention", "질병 예방·검사"], CT: ["heart", "심혈관"], PETCT: ["cancer", "암"] };
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -27,6 +30,7 @@ function renderHeader(active) {
     ["index.html#scans", "검사 안내", "scans"],
     ["index.html#packages", "패키지·가격", "packages"],
     ["centers.html", "제휴 병원", "centers"],
+    [LONGEVITUBE, "건강 영상<sup class=\"nav-tag\">TV</sup>", "videos"],
     ["index.html#faq", "자주 묻는 질문", "faq"]
   ];
   $("#site-header").innerHTML = `
@@ -70,6 +74,7 @@ function renderFooter() {
               <li><a href="book.html">검사 예약</a></li>
               <li><a href="centers.html">제휴 병원</a></li>
               <li><a href="#" onclick="openMyReservations();return false">예약 확인</a></li>
+              <li><a href="${LONGEVITUBE}">LongeviTube 건강 영상</a></li>
               <li><a href="index.html#faq">자주 묻는 질문</a></li>
             </ul>
           </div>
@@ -148,6 +153,7 @@ function initHome() {
       <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:6px;padding-top:8px">
         ${SCANS.filter(s => s.modality === k).map(s => `<a class="chip plain" href="book.html?scan=${s.id}">${s.name} · ${won(s.price)}</a>`).join("")}
       </div>
+      <a class="mod-video" href="${LONGEVITUBE}#/c/${MOD_VIDEO_CAT[k][0]}">▶ ${MOD_VIDEO_CAT[k][1]} 관련 영상 보기</a>
       </div>
     </article>`).join("");
 
@@ -172,6 +178,43 @@ function initHome() {
   $("#stat-regions").textContent = REGIONS.length + "개";
 
   $("#faq-list").innerHTML = FAQS.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join("");
+  initVideos();
+}
+
+/* ---------- LongeviTube 연동: 홈 영상 섹션 ---------- */
+function initVideos() {
+  const sec = $("#videos");
+  if (!sec) return;
+  // longevitube/js/data.js를 못 불러온 경우 섹션 숨김
+  if (typeof VIDEOS === "undefined" || typeof CATEGORIES === "undefined") { sec.hidden = true; return; }
+  const TOPICS = ["prevention", "cancer", "heart", "mental", "aging"];
+  const cat = id => CATEGORIES.find(c => c.id === id);
+  const inCat = (v, id) => v.cat === id || (v.cats || []).includes(id);
+  const topics = TOPICS.filter(id => cat(id) && VIDEOS.some(v => v.yt && inCat(v, id)));
+  if (!topics.length) { sec.hidden = true; return; }
+  let active = topics[0];
+
+  $("#video-count").textContent = VIDEOS.length;
+  $("#video-tabs").innerHTML = topics.map(id =>
+    `<button type="button" role="tab" data-topic="${id}" aria-selected="${id === active}">${cat(id).icon} ${esc(cat(id).name)}</button>`).join("");
+
+  function render() {
+    $$("#video-tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.topic === active));
+    const list = VIDEOS.filter(v => v.yt && inCat(v, active)).slice(0, 4);
+    $("#video-grid").innerHTML = list.map(v => `
+      <a class="vcard" href="${LONGEVITUBE}#/v/${encodeURIComponent(v.id)}">
+        <span class="vthumb"><img src="https://i.ytimg.com/vi/${encodeURIComponent(v.yt)}/hqdefault.jpg" alt="" loading="lazy"><i aria-hidden="true">▶</i></span>
+        <b>${esc(v.title)}</b>
+        <small>${esc(v.speaker || "")}${v.channel ? " · " + esc(v.channel) : ""}</small>
+      </a>`).join("");
+    $("#video-more").href = `${LONGEVITUBE}#/c/${active}`;
+    $("#video-more").textContent = `${cat(active).name} 영상 모두 보기 →`;
+  }
+  $("#video-tabs").addEventListener("click", e => {
+    const b = e.target.closest("button[data-topic]");
+    if (b) { active = b.dataset.topic; render(); }
+  });
+  render();
 }
 
 /* =========================================================

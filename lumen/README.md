@@ -35,3 +35,9 @@ URL 파라미터: `book.html?pkg=heart-lung`, `book.html?scan=petct`, `book.html
 `img/*.jpg`는 `tools/gen_images.py`로 생성한 **합성 의료영상 일러스트**입니다 (실제 환자 영상 아님, 저작권 걱정 없음).
 재생성: `pip install numpy scipy pillow && python3 lumen/tools/gen_images.py`
 실제 센터·장비·고객 사진이 생기면 같은 파일명으로 교체하거나 `index.html`에 추가하면 됩니다.
+
+## LongeviTube 연동
+같은 사이트의 영상 채널 `../longevitube/`와 연결되어 있습니다.
+- 상단 메뉴·푸터의 **건강 영상** → LongeviTube
+- 메인 **LongeviTube 섹션**: `longevitube/js/data.js`를 직접 불러와 주제별(질병 예방·암·심혈관·뇌·노화) 인기 영상 4개씩 표시. LongeviTube 관리자 페이지에서 영상을 바꾸면 여기에도 자동 반영됩니다.
+- 검사 장비 카드의 **관련 영상 보기**: MRI→질병 예방·검사, CT→심혈관, PET-CT→암 (`js/app.js`의 `MOD_VIDEO_CAT`)
