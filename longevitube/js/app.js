@@ -110,13 +110,18 @@
         ${link("#/history", "🕘", "시청 기록", "history")}
         ${link("#/liked", "♥", "좋아요 표시한 영상", "liked")}
       </div>
+      <div class="side-group"><div class="side-title">LUMEN 정밀검진</div>
+        ${link(LUMEN + "index.html", "🩻", "전신 MRI 검진 안내", "x-lumen")}
+        ${link(LUMEN + "book.html", "📅", "검사 예약", "x-lumen")}
+        ${link(LUMEN + "centers.html", "🏥", "제휴 병원", "x-lumen")}
+      </div>
       <div class="side-group"><div class="side-title">카테고리</div>
         ${CATEGORIES.map(c => link("#/c/" + c.id, c.icon, c.name, "c:" + c.id)).join("")}
       </div>
       <div class="side-group"><div class="side-title">연사 · 채널</div>
         ${speakers().slice(0, 14).map(s => `<a class="side-link ${route === "s:" + s ? "active" : ""}" href="#/s/${encodeURIComponent(s)}">${avatar(s)}<span>${esc(s)}</span></a>`).join("")}
       </div>
-      <div class="side-foot">LongeviTube는 장수·건강수명 관련 영상을 모은 큐레이션 사이트입니다. 영상 내용은 의학적 진단·치료를 대신하지 않습니다.<br><br>© LongeviTube · <a href="admin.html">관리자</a></div>`;
+      <div class="side-foot">LongeviTube는 <a href="${LUMEN}">LUMEN</a>이 운영하는 장수·건강수명 영상 큐레이션 채널입니다. 영상 내용은 의학적 진단·치료를 대신하지 않습니다.<br><br>© LongeviTube · <a href="admin.html">관리자</a></div>`;
   }
 
   /* ── 페이지 */
@@ -158,6 +163,30 @@
     return `<div class="toolbar" style="margin-top:20px"><h1>‘${esc(q)}’ 검색 결과 ${l.length}개</h1></div>` +
       grid(l, `일치하는 영상이 없습니다.<br><br><a class="pill" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q + " longevity")}" target="_blank" rel="noopener">유튜브에서 ‘${esc(q)}’ 검색 ↗</a>`);
   }
+  /* ── LUMEN 연동: 영상 주제에 맞는 검사 안내 */
+  const LUMEN = "../lumen/";
+  const LUMEN_SCAN = {
+    cancer:     { scan: "petct",     name: "전신 PET-CT",        text: "대사가 활발한 부위를 전신에서 찾는 암 정밀 영상 검사" },
+    heart:      { scan: "cac",       name: "관상동맥 석회화 CT",   text: "심장혈관 석회화 점수로 심혈관 질환 위험도를 수치화" },
+    mental:     { scan: "brain-mri", name: "뇌 MRI + MRA",       text: "뇌 실질과 뇌혈관을 함께 보는 뇌졸중·뇌동맥류 검사" },
+    prevention: { scan: "wb-mri",    name: "전신 MRI",           text: "방사선 없이 뇌부터 골반까지 13개 이상 장기를 한 번에" }
+  };
+  function lumenCta(v) {
+    const key = catsOf(v).find(c => LUMEN_SCAN[c]);
+    const s = LUMEN_SCAN[key] || LUMEN_SCAN.prevention;
+    return `<aside class="lumen-cta">
+      <div class="lumen-cta-txt">
+        <span class="lumen-cta-eyebrow">${'<span class="lumen-mark" aria-hidden="true"></span>'} LUMEN 정밀검진 · 관련 검사</span>
+        <b>${esc(s.name)}</b>
+        <span class="sub">${esc(s.text)}</span>
+      </div>
+      <div class="lumen-cta-btns">
+        <a class="pill" href="${LUMEN}index.html#scans">검사 안내</a>
+        <a class="pill lumen-cta-go" href="${LUMEN}book.html?scan=${s.scan}">예약하기</a>
+      </div>
+    </aside>`;
+  }
+
   function pageWatch(id) {
     const v = byId(id);
     if (!v) return notFound();
@@ -212,6 +241,7 @@
           ${v.tags && v.tags.length ? `<div class="tags">${v.tags.map(t => `<a href="#/search/${encodeURIComponent(t)}">#${esc(t)}</a>`).join("")}</div>` : ""}
           <div class="notice">※ 교육용 정보입니다. 약물·보충제 복용이나 식단·운동 변화는 의료진과 상의하세요.</div>
         </div>
+        ${lumenCta(v)}
         <section class="notes">
           <h3>📝 내 메모</h3>
           <textarea id="noteBox" placeholder="이 영상에서 기억할 내용이나 실천할 점을 적어보세요. (이 브라우저에만 저장)">${esc(notes)}</textarea>
