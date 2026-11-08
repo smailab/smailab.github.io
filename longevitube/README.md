@@ -29,3 +29,14 @@
 ## 캐시
 `index.html`이 CSS·JS를 `?v=<1분 단위 값>`을 붙여 불러옵니다. 머지·배포 후 브라우저나 GitHub Pages 캐시에 남은 예전 파일 대신 최신 파일을 받게 하기 위한 것으로, 버전을 따로 올릴 필요가 없습니다.
 (`index.html` 자체는 GitHub Pages 기본 캐시 때문에 최대 10분 늦게 반영될 수 있습니다.)
+
+## 관리자 페이지 (`admin.html`)
+주소: `https://smailab.github.io/longevitube/admin.html` (사이트 사이드바 맨 아래 ‘관리자’ 링크)
+
+- **권한:** 이 저장소에 쓰기 권한이 있는 GitHub 토큰으로 로그인합니다. 서버가 없으므로 토큰이 곧 관리자 권한입니다.
+  - 만드는 법: GitHub → Settings → Developer settings → Fine-grained tokens → Repository access: `smailab/smailab.github.io`만 → Permissions: Contents **Read and write**
+  - 토큰은 관리자 브라우저에만 저장되고 GitHub API(`api.github.com`)로만 전송됩니다.
+- **영상:** 검색·카테고리 필터, 제목·원제·연사·채널·카테고리·난이도·형식·설명·태그 수정, 삭제, 새 영상 추가, 순서(인기순) 변경
+- **카테고리:** 이름·아이콘·썸네일 색 수정, 순서 변경, 추가, 삭제(영상을 다른 카테고리로 옮기거나 함께 삭제). 삭제된 카테고리 링크는 `CATEGORY_ALIAS`로 옮긴 카테고리에 연결됩니다.
+- **게시:** ‘게시하기’를 누르면 `longevitube/js/data.js`가 `master`에 바로 커밋되고 1~2분 뒤 사이트에 반영됩니다. 게시 전 변경은 브라우저에 초안으로 보관되어 새로고침해도 유지됩니다.
+- **충돌:** 그 사이 다른 곳에서 `data.js`가 바뀌면 게시가 거부됩니다(덮어쓰기 방지). 메뉴 ⋮ → ‘GitHub에서 다시 불러오기’ 후 다시 수정하세요.

@@ -45,7 +45,7 @@
     return `<span class="avatar ${cls}" style="background:hsl(${hue(n)} 45% 42%)" aria-hidden="true">${esc(n.trim()[0].toUpperCase())}</span>`;
   }
   function genThumb(v) {
-    const g = GRAD[catId(v.cat)] || ["#334", "#667"];
+    const g = (CAT[catId(v.cat)] && CAT[catId(v.cat)].colors) || GRAD[catId(v.cat)] || ["#334", "#667"];
     const c = CAT[catId(v.cat)];
     return `<div class="gen" style="background:linear-gradient(135deg,${g[0]},${g[1]})">
       <span class="gen-icon" aria-hidden="true">${c ? c.icon : "▶"}</span>
@@ -116,7 +116,7 @@
       <div class="side-group"><div class="side-title">연사 · 채널</div>
         ${speakers().slice(0, 14).map(s => `<a class="side-link ${route === "s:" + s ? "active" : ""}" href="#/s/${encodeURIComponent(s)}">${avatar(s)}<span>${esc(s)}</span></a>`).join("")}
       </div>
-      <div class="side-foot">LongeviTube는 장수·건강수명 관련 영상을 모은 큐레이션 사이트입니다. 영상 내용은 의학적 진단·치료를 대신하지 않습니다.<br><br>© LongeviTube</div>`;
+      <div class="side-foot">LongeviTube는 장수·건강수명 관련 영상을 모은 큐레이션 사이트입니다. 영상 내용은 의학적 진단·치료를 대신하지 않습니다.<br><br>© LongeviTube · <a href="admin.html">관리자</a></div>`;
   }
 
   /* ── 페이지 */
