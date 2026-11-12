@@ -1,20 +1,21 @@
-/* J Rich Clinic 후쿠오카 – 마운자로 클리닉 데이터
+/* K-Rich Clinic 후쿠오카 – 마운자로 클리닉 데이터
  * ※ 시연용 샘플 데이터입니다. 실제 운영 전 가격·주소·진료시간·연락처를 반드시 교체하세요.
  * 정보 출처(2026-11 기준): 식약처·관세청 합동 보도자료(2026-11-11), 일본 일라이릴리 보관·폐기 안내,
  * ANA 자가주사기 기내 반입 안내, SURMOUNT-1 (Jastreboff AM et al., NEJM 2022;387:205-216) */
 
 const CLINIC = {
-  name: 'J Rich Clinic',
-  nameKo: 'J 리치 클리닉',
-  nameJa: 'Jリッチクリニック',
+  name: 'K-Rich Clinic',
+  nameKo: 'K-리치 클리닉',
+  nameJa: 'K-Richクリニック',
   city: '후쿠오카',
+  site: 'https://k-rich.jp/',                 // 공식 사이트
   tagline: '후쿠오카 마운자로 당일 처방 · 한국어 전담 코디네이터',
-  address: '〒812-0011 福岡県福岡市博多区博多駅前 2-X-X J Rich Bldg 5F',
+  address: '〒812-0011 福岡県福岡市博多区博多駅前 2-X-X K-Rich Bldg 5F',
   addressKo: '후쿠오카시 하카타구 하카타에키마에 2초메 (하카타역 하카타출구 도보 4분)',
   phone: '+81-92-000-0000',
-  kakao: 'https://pf.kakao.com/_jrichclinic',   // 카카오톡 채널 URL로 교체
-  line: 'https://lin.ee/jrichclinic',           // LINE 공식계정 URL로 교체
-  email: 'hello@jrichclinic.jp',
+  kakao: 'https://pf.kakao.com/_krichclinic',   // 카카오톡 채널 URL로 교체
+  line: 'https://lin.ee/krichclinic',           // LINE 공식계정 URL로 교체
+  email: 'info@k-rich.jp',
   mapUrl: 'https://www.google.com/maps/search/?api=1&query=%E5%8D%9A%E5%A4%9A%E9%A7%85',
   hours: [
     { day: '월·화·목·금', time: '10:00 – 19:00' },
@@ -64,7 +65,7 @@ const PRICES = {
   compare: [
     { label: '한국 (비급여 평균, 보도 기준)', krw: 300000, note: '병원·약국마다 가격 차이 큼' },
     { label: '일본 온라인 클리닉 평균', jpy: 14500, note: '배송비 포함 12,100~17,000엔' },
-    { label: 'J Rich Clinic 후쿠오카', jpy: 15200, note: '진료·처방·주사 교육 포함', us: true },
+    { label: 'K-Rich Clinic 후쿠오카', jpy: 15200, note: '진료·처방·주사 교육 포함', us: true },
   ],
   fxKrwPer100Jpy: 853.84, // 2026-11-06 기준
 };
