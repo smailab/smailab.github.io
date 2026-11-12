@@ -65,7 +65,7 @@
             </ul>
           </div>
           <div class="legal">
-            마운자로(Mounjaro)는 일라이 릴리의 등록상표이며, 본 클리닉은 체중 관리 목적의 자유진료(비보험)로 처방합니다. 의약품은 의사의 진료 후 처방 여부가 결정되며 효과와 부작용에는 개인차가 있습니다. 본 사이트의 내용은 의학적 진단을 대체하지 않습니다. 개인정보는 예약·진료 목적으로만 사용됩니다.<br>
+            마운자로(Mounjaro)는 일라이 릴리의 등록상표입니다. 일본에서 2형 당뇨병 치료제로 승인된 의약품이며, 체중 관리 목적 사용은 적응증 외 사용으로 본 클리닉은 자유진료(비보험)로 처방합니다. 자유진료 의약품은 일본 의약품 부작용 피해 구제 제도의 대상이 아닙니다. 흔한 부작용: 메스꺼움·설사·식욕 저하. 의약품은 의사의 진료 후 처방 여부가 결정되며 효과와 부작용에는 개인차가 있습니다. 한국 반입 기준(2026-11-12 시행, 3개월분까지 휴대 반입)은 변경될 수 있으니 출국 전 관세청(125)에 확인하세요. 본 사이트의 내용은 의학적 진단을 대체하지 않습니다. 개인정보는 예약·진료 목적으로만 사용됩니다.<br>
             © ${new Date().getFullYear()} ${esc(CLINIC.name)}. All rights reserved.
           </div>
         </div>
@@ -94,9 +94,21 @@
         <h3>2.5mg ${esc(pk.label)}</h3>
         <div class="price">${yen(total)} <small>세금 포함</small></div>
         ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : '<div class="save" style="color:var(--ink-3)">기본 구성</div>'}
-        <ul><li>의사 진료 + 통역 동석</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·진단서</li>${pk.pens >= 8 ? '<li>보냉 가방 + 아이스팩 증정</li>' : ''}</ul>
+        <ul><li>의사 진료 + 통역 동석</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.pens >= 8 ? '<li>보냉 가방 + 아이스팩 증정</li>' : ''}${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
         <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-block" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
     }).join('');
+
+    $('#trial-chart').innerHTML = TRIAL.bars.map(b => `<div class="trial-row"><span class="tl">${esc(b.label)}</span><div class="tb"><div class="tf ${b.label === '위약' ? 'placebo' : ''}" style="width:${(b.pct / 25) * 100}%"></div></div><b>−${b.pct}%</b></div>`).join('');
+    $('#trial-stats').innerHTML = TRIAL.stats.map(t => `<div class="trial-stat"><b>${t.v}</b><span>${esc(t.k)}</span></div>`).join('');
+    $('#trial-source').textContent = '출처: ' + TRIAL.source;
+
+    const krw = n => '약 ' + (Math.round(n / 1000) * 1000).toLocaleString('ko-KR') + '원';
+    const maxKrw = Math.max(...PRICES.compare.map(c => c.krw || c.jpy * PRICES.fxKrwPer100Jpy / 100));
+    $('#compare-rows').innerHTML = PRICES.compare.map(c => { const k = c.krw || c.jpy * PRICES.fxKrwPer100Jpy / 100; return `<div class="cmp-row ${c.us ? 'us' : ''}"><div class="cl"><b>${esc(c.label)}</b><span class="muted">${esc(c.note)}</span></div><div class="cb"><div class="cf" style="width:${(k / maxKrw) * 100}%"></div></div><div class="cv">${c.jpy ? yen(c.jpy) + '<small>' + krw(k) + '</small>' : krw(k)}</div></div>`; }).join('');
+
+    $('#bring-grid').innerHTML = BRING.map(b => `<div class="card"><div class="icon">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
+    $('#qty-rows').innerHTML = QTY_GUIDE.map(q => `<tr><td>${esc(q.stay)}</td><td>${esc(q.shots)}</td><td class="num">${esc(q.home)}</td></tr>`).join('');
+    $('#checklist').innerHTML = CHECKLIST.map((c, i) => `<div class="card"><div class="icon" style="font-size:14px;font-weight:800;color:var(--gold)">0${i + 1}</div><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
 
     $('#steps-list').innerHTML = STEPS.map(s => `<div class="step"><div class="n">${s.n}</div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p></div>`).join('');
     $('#team-grid').innerHTML = DOCTORS.map((d, i) => `<div class="card"><div class="avatar">${i === 0 ? '🩺' : '🙋‍♀️'}</div><div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p></div></div>`).join('');
@@ -116,7 +128,7 @@
   }
 
   /* ---------- booking ---------- */
-  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
+  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', receive: 'clinic', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
   const STEP_NAMES = ['진료 선택', '날짜 · 시간', '정보 · 사전 문진', '확인'];
 
   const load = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; } };
@@ -133,8 +145,9 @@
     const pen = PRICES.pens.find(p => p.dose === state.dose);
     const pk = PRICES.packs.find(p => p.id === state.pack);
     const base = pen.price * pk.pens, pens = Math.round(base * (1 - pk.discount));
-    const extras = state.extras.reduce((s, id) => s + (PRICES.extras.find(e => e.id === id)?.price || 0), 0);
-    return { pen, pk, base, pens, extras, total: pens + extras };
+    const rcv = RECEIVE.find(r => r.id === state.receive);
+    const extras = state.extras.reduce((s, id) => s + (PRICES.extras.find(e => e.id === id)?.price || 0), 0) + rcv.price;
+    return { pen, pk, base, pens, extras, rcv, total: pens + extras };
   }
 
   function stepper() {
@@ -148,9 +161,10 @@
       <div><dt>구분</dt><dd>${state.visit === 'first' ? '초진' : '재진'}</dd></div>
       <div><dt>용량</dt><dd>마운자로 ${p.pen.dose}mg</dd></div>
       <div><dt>구성</dt><dd>${esc(p.pk.label)}</dd></div>
+      <div><dt>수령</dt><dd>${esc(p.rcv.title)}</dd></div>
       <div><dt>일시</dt><dd>${dateTxt}</dd></div>
       <div><dt>펜 합계</dt><dd>${yen(p.pens)}${p.pk.discount ? ` <span class="muted">(${Math.round(p.pk.discount * 100)}%↓)</span>` : ''}</dd></div>
-      ${p.extras ? `<div><dt>추가 옵션</dt><dd>${yen(p.extras)}</dd></div>` : ''}
+      ${p.extras ? `<div><dt>배송·추가 옵션</dt><dd>${yen(p.extras)}</dd></div>` : ''}
       <div><dt>상담료</dt><dd>¥0</dd></div>
     </dl>
     <div class="total"><span>예상 금액<small>세금 포함 · 원내 결제</small></span><span>${yen(p.total)}</span></div>
@@ -171,14 +185,19 @@
       <h3 style="margin:22px 0 10px">용량</h3>
       <div class="choice-grid" id="dose">${PRICES.pens.map(p => `<button class="choice ${state.dose === p.dose ? 'selected' : ''}" data-d="${p.dose}" ${state.visit === 'first' && p.dose !== 2.5 ? 'disabled' : ''}><b>${p.dose}mg</b><span>${esc(p.weeks)}</span><span class="p">${yen(p.price)} / 펜</span></button>`).join('')}</div>
       <h3 style="margin:22px 0 10px">수량</h3>
-      <div class="choice-grid" id="pack">${PRICES.packs.map(pk => `<button class="choice ${state.pack === pk.id ? 'selected' : ''}" data-p="${pk.id}"><b>${esc(pk.label)}</b><span>${pk.discount ? `${Math.round(pk.discount * 100)}% 할인` : '기본'}${pk.pens >= 8 ? ' · 보냉 가방 증정' : ''}</span></button>`).join('')}</div>
+      <div class="choice-grid" id="pack">${PRICES.packs.map(pk => `<button class="choice ${state.pack === pk.id ? 'selected' : ''}" data-p="${pk.id}"><b>${esc(pk.label)}</b><span>${pk.discount ? `${Math.round(pk.discount * 100)}% 할인` : '기본'}${pk.pens >= 8 ? ' · 보냉 가방 증정' : ''}${pk.note ? ' · ' + esc(pk.note) : ''}</span></button>`).join('')}</div>
+      <p class="muted" style="margin:10px 0 0">일본에서 맞을 양 + 한국에 가져갈 양을 합쳐 최대 12개(3개월분)까지 처방합니다. 초진은 2.5mg 4개 + 5mg 8개처럼 증량 구성으로 드립니다.</p>
+      <h3 style="margin:22px 0 10px">수령 방법</h3>
+      <div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yen(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>
+      ${state.receive === 'hotel' ? '<div class="notice" style="margin-top:10px">호텔 배송은 온라인 진료(카카오톡 영상) 후 1~3영업일에 도착합니다. 체크아웃 직전 수령은 피하고, 호텔에 냉장 택배가 온다고 미리 알려주세요. 해외 배송은 불가합니다.</div>' : ''}
       <h3 style="margin:22px 0 10px">추가 옵션</h3>
       <div class="grid" style="gap:8px">${PRICES.extras.map(e => `<label class="check"><input type="checkbox" data-e="${e.id}" ${state.extras.includes(e.id) ? 'checked' : ''}><span><b>${esc(e.name)}</b> &nbsp;<span style="color:var(--green);font-weight:700">${e.price ? yen(e.price) : '무료'}</span>${e.note ? `<br><span class="muted">${esc(e.note)}</span>` : ''}</span></label>`).join('')}</div>
-      <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4주 + 5mg 4주로 받고 싶어요 / 혈액검사 원해요">${esc(state.mix)}</textarea></label>
+      <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4개 + 5mg 8개로 받고 싶어요 / 혈액검사 원해요">${esc(state.mix)}</textarea></label>
       <div class="actions"><span></span><button class="btn btn-primary" id="next">날짜 선택 →</button></div>`;
     el.querySelectorAll('#visit .choice').forEach(b => b.onclick = () => { state.visit = b.dataset.v; if (state.visit === 'first') state.dose = 2.5; step1(); summary(); });
     el.querySelectorAll('#dose .choice').forEach(b => b.onclick = () => { if (b.disabled) return; state.dose = +b.dataset.d; step1(); summary(); });
     el.querySelectorAll('#pack .choice').forEach(b => b.onclick = () => { state.pack = b.dataset.p; step1(); summary(); });
+    el.querySelectorAll('#receive .choice').forEach(b => b.onclick = () => { state.receive = b.dataset.r; step1(); summary(); });
     el.querySelectorAll('input[data-e]').forEach(c => c.onchange = () => { state.extras = [...el.querySelectorAll('input[data-e]:checked')].map(x => x.dataset.e); summary(); });
     $('#mix').oninput = e => state.mix = e.target.value;
     $('#next').onclick = () => { state.step = 1; render(); };
@@ -220,7 +239,7 @@
     }
     const prevOk = new Date(y, m, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
     const nextOk = new Date(y, m + 1, 1) <= maxD;
-    el.innerHTML = `<h2>2. 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 수요일 휴진, 당일 예약은 카카오톡으로 문의해 주세요.</p>
+    el.innerHTML = `<h2>2. ${state.receive === 'hotel' ? '온라인 진료' : '내원'} 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 수요일 휴진, 당일 예약은 카카오톡으로 문의해 주세요.${state.receive === 'hotel' ? ' 호텔 배송은 진료일로부터 1~3영업일 뒤 도착하므로 체크아웃 4일 전까지 진료를 잡아주세요.' : ''}</p>
       <div class="cal-nav"><button id="prev" ${prevOk ? '' : 'disabled'}>‹</button><b>${y}년 ${m + 1}월</b><button id="next-m" ${nextOk ? '' : 'disabled'}>›</button></div>
       <div class="cal">${cells}</div>
       <div id="slots-wrap">${state.date ? slotsHtml() : '<p class="muted" style="margin-top:16px">날짜를 선택하면 가능한 시간이 표시됩니다.</p>'}</div>
@@ -252,7 +271,9 @@
         <label class="f">몸무게 (kg) *<input id="weight" type="number" value="${esc(i.weight || '')}" placeholder="70" inputmode="decimal"></label>
         <div class="full bmi-box"><span>BMI <span class="muted">(자동 계산 · 보통 23 이상 처방 대상)</span></span><b id="bmi">-</b></div>
         <label class="f full">복용 중인 약 · 기저질환 (선택)<textarea id="meds" rows="2" placeholder="예) 고혈압약 복용 중 / 갑상선 기능 저하">${esc(i.meds || '')}</textarea></label>
-        <label class="f full">후쿠오카 체류 기간 (선택)<input id="stay" value="${esc(i.stay || '')}" placeholder="예) 11/20 ~ 11/23, 하카타 ○○호텔"></label>
+        <label class="f full">일본 체류 기간 · 숙소 ${state.receive === 'hotel' ? '*' : '(선택)'}<input id="stay" value="${esc(i.stay || '')}" placeholder="예) 11/20 ~ 11/23, 하카타 ○○호텔 (호텔 배송 시 호텔명·주소·예약자명)"></label>
+        <label class="f">숙소 냉장고<select id="fridge"><option value="">모름</option><option ${i.fridge === 'yes' ? 'selected' : ''} value="yes">있음</option><option ${i.fridge === 'no' ? 'selected' : ''} value="no">없음 (상온 21일 이내 사용)</option></select></label>
+        <label class="f">이미 사용 중이라면 현재 용량·마지막 투여일<input id="prior" value="${esc(i.prior || '')}" placeholder="예) 5mg 3주째, 마지막 11/8"></label>
       </div>
       <h3 style="margin:26px 0 10px">사전 문진 <span class="muted">(해당 항목에 체크)</span></h3>
       <div class="grid" style="gap:8px">${SCREENING.map(s => `<label class="check"><input type="checkbox" data-s="${s.id}" ${state.screen[s.id] ? 'checked' : ''}><span>${esc(s.label)}</span></label>`).join('')}</div>
@@ -271,14 +292,14 @@
     $('#back').onclick = () => { collect(); state.step = 1; render(); };
     $('#next').onclick = () => {
       collect();
-      const req = ['name', 'ename', 'birth', 'phone', 'contact', 'height', 'weight'];
+      const req = ['name', 'ename', 'birth', 'phone', 'contact', 'height', 'weight', ...(state.receive === 'hotel' ? ['stay'] : [])];
       let ok = true;
       req.forEach(id => { const f = $('#' + id); const bad = !f.value.trim(); f.classList.toggle('err', bad); if (bad) ok = false; });
       if (!ok) { el.querySelector('.err').focus(); return; }
       if (!state.agree) { alert('개인정보 수집·이용에 동의해 주세요.'); return; }
       state.step = 3; render();
     };
-    function collect() { ['name', 'ename', 'birth', 'sex', 'phone', 'contact', 'height', 'weight', 'meds', 'stay'].forEach(id => state.info[id] = $('#' + id).value.trim()); state.info.ename = state.info.ename.toUpperCase(); }
+    function collect() { ['name', 'ename', 'birth', 'sex', 'phone', 'contact', 'height', 'weight', 'meds', 'stay', 'fridge', 'prior'].forEach(id => state.info[id] = $('#' + id).value.trim()); state.info.ename = state.info.ename.toUpperCase(); }
   }
 
   /* step 4 – confirm */
@@ -290,6 +311,7 @@
       <div class="confirm"><dl>
         <div><dt>일시</dt><dd>${fmtDate(state.date)} ${state.time}</dd></div>
         <div><dt>구분</dt><dd>${state.visit === 'first' ? '초진' : '재진'} · 마운자로 ${p.pen.dose}mg · ${esc(p.pk.label)}</dd></div>
+        <div><dt>수령</dt><dd>${esc(p.rcv.title)}${p.rcv.price ? ' (' + yen(p.rcv.price) + ')' : ''}</dd></div>
         ${state.extras.length ? `<div><dt>추가 옵션</dt><dd>${state.extras.map(id => esc(PRICES.extras.find(e => e.id === id).name)).join(', ')}</dd></div>` : ''}
         ${state.mix ? `<div><dt>희망 구성</dt><dd>${esc(state.mix)}</dd></div>` : ''}
         <div><dt>예약자</dt><dd>${esc(i.name)} (${esc(i.ename)})</dd></div>
@@ -297,6 +319,8 @@
         <div><dt>연락처</dt><dd>${esc(i.phone)} · ${esc(i.contact)}</dd></div>
         <div><dt>신체</dt><dd>${esc(i.height)}cm · ${esc(i.weight)}kg · BMI ${bmi}</dd></div>
         ${i.meds ? `<div><dt>복용약·질환</dt><dd>${esc(i.meds)}</dd></div>` : ''}
+        ${i.stay ? `<div><dt>체류·숙소</dt><dd>${esc(i.stay)}${i.fridge ? ' · 냉장고 ' + (i.fridge === 'yes' ? '있음' : '없음') : ''}</dd></div>` : ''}
+        ${i.prior ? `<div><dt>기존 투여</dt><dd>${esc(i.prior)}</dd></div>` : ''}
         ${screens.length ? `<div><dt>문진 해당</dt><dd style="color:var(--red)">${screens.map(esc).join('<br>')}</dd></div>` : '<div><dt>문진</dt><dd>해당 사항 없음</dd></div>'}
         <div><dt>예상 금액</dt><dd style="color:var(--green);font-weight:900">${yen(p.total)} <span class="muted">(원내 결제)</span></dd></div>
       </dl></div>
@@ -305,14 +329,14 @@
     $('#back').onclick = () => { state.step = 2; render(); };
     $('#submit').onclick = () => {
       const code = 'JR' + Date.now().toString(36).toUpperCase().slice(-6);
-      const rec = { code, createdAt: new Date().toISOString(), status: 'pending', date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label, extras: state.extras, mix: state.mix, total: p.total, info: { ...i }, screen: screens };
+      const rec = { code, createdAt: new Date().toISOString(), status: 'pending', date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label, receive: p.rcv.title, extras: state.extras, mix: state.mix, total: p.total, info: { ...i }, screen: screens };
       save([rec, ...load()]);
       done(rec);
     };
   }
 
   function kakaoText(r) {
-    return `[J Rich Clinic 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
+    return `[J Rich Clinic 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
   }
 
   function done(r) {
@@ -320,7 +344,7 @@
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
       <p class="desc">아래 예약번호를 캡처해 두세요. 코디네이터가 영업시간 내 카카오톡(${esc(r.info.contact)})으로 확정 안내를 드립니다.</p>
       <div class="code">${r.code}</div>
-      <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>예상 금액</dt><dd>${yen(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
+      <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yen(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
         <button class="btn btn-kakao" id="copy">예약 내용 복사 후 카카오톡 열기</button>
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>

@@ -321,3 +321,39 @@ label.f input.err, label.f select.err { border-color: var(--red); }
 .modal { background: #fff; width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 26px; max-height: 85vh; overflow: auto; }
 @media (min-width: 700px) { .modal { border-radius: 20px; } }
 .modal h2 { font-size: 20px; margin-bottom: 12px; }
+
+/* clinical chart */
+.trial-chart { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: grid; gap: 14px; }
+.trial-row { display: grid; grid-template-columns: 54px 1fr 64px; align-items: center; gap: 12px; font-size: 14px; }
+.trial-row .tl { font-weight: 700; color: var(--ink-2); }
+.trial-row .tb { height: 22px; background: var(--bg-2); border-radius: 11px; overflow: hidden; }
+.trial-row .tf { height: 100%; border-radius: 11px; background: linear-gradient(90deg, var(--green-2), var(--green)); }
+.trial-row .tf.placebo { background: #c9cfca; }
+.trial-row b { text-align: right; color: var(--green); font-weight: 900; font-size: 15px; }
+.trial-stat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; display: flex; align-items: center; gap: 16px; }
+.trial-stat b { font-size: 32px; font-weight: 900; color: var(--green); letter-spacing: -.02em; min-width: 90px; }
+.trial-stat span { color: var(--ink-2); font-size: 14.5px; }
+
+/* korea comparison */
+.compare { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; }
+.compare h3 { font-size: 16px; margin-bottom: 12px; }
+.cmp-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+@media (min-width: 640px) { .cmp-row { grid-template-columns: 1.2fr 1fr 120px; align-items: center; gap: 12px; } }
+.cmp-row:last-child { border-bottom: 0; }
+.cmp-row .cl b { display: block; font-size: 14px; }
+.cmp-row .cl span { font-size: 12px; display: block; }
+.cmp-row .cb { height: 12px; background: var(--bg-2); border-radius: 6px; overflow: hidden; }
+.cmp-row .cf { height: 100%; background: #c9cfca; border-radius: 6px; }
+.cmp-row.us .cf { background: linear-gradient(90deg, var(--green-2), var(--gold)); }
+.cmp-row .cv { font-weight: 800; color: var(--ink-2); text-align: right; font-size: 15px; }
+.cmp-row.us .cv { color: var(--green); }
+.cmp-row .cv small { display: block; font-weight: 500; color: var(--ink-3); font-size: 12px; }
+
+/* quantity guide (inside dark bring section) */
+.qty-guide { margin-top: 28px; }
+.qty-guide h3 { color: #fff; margin-bottom: 6px; }
+.qty-guide p { color: rgba(255,255,255,.75); font-size: 14.5px; margin: 0 0 14px; }
+.qty-guide .price-table th { background: var(--green); }
+.qty-guide .price-table td { color: var(--ink); }
+
+.tag-sm { display: inline-block; font-size: 11px; background: var(--gold-soft); color: #8a6a1e; padding: 2px 8px; border-radius: 999px; margin-left: 4px; font-weight: 700; vertical-align: middle; }
