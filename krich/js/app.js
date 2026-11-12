@@ -1,9 +1,9 @@
-/* J Rich Clinic – 공통 UI + 랜딩 렌더링 + 예약 플로우 */
+/* K-Rich Clinic – 공통 UI + 랜딩 렌더링 + 예약 플로우 */
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const yen = n => '¥' + Number(n).toLocaleString('ja-JP');
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const STORE_KEY = 'jrich_bookings';
+  const STORE_KEY = 'krich_bookings';
 
   /* ---------- header / footer ---------- */
   function header() {
@@ -12,7 +12,7 @@
       <div class="topbar">🇰🇷 한국어 전담 코디네이터 상주 · <b>온라인 예약 시 초진 상담료 0엔</b> · 당일 처방</div>
       <header class="site-header">
         <div class="container">
-          <a class="logo" href="index.html"><span class="mark">J</span><span>J Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
+          <a class="logo" href="index.html"><span class="mark">K</span><span>K-Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
           <nav class="nav">
             <a href="index.html#mounjaro">마운자로란</a>
             <a href="index.html#price">가격</a>
@@ -47,7 +47,7 @@
       <footer class="site-footer">
         <div class="container">
           <div>
-            <a class="logo" href="index.html"><span class="mark">J</span><span>J Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
+            <a class="logo" href="index.html"><span class="mark">K</span><span>K-Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
             <p style="margin:14px 0 6px">${esc(CLINIC.nameJa)} · ${esc(CLINIC.address)}</p>
             <p style="margin:0">TEL ${esc(CLINIC.phone)} · ${esc(CLINIC.email)}</p>
           </div>
@@ -60,6 +60,7 @@
             <ul>
               <li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>
               <li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>
+              <li><a href="${CLINIC.site}" target="_blank" rel="noopener">공식 사이트 (k-rich.jp)</a></li>
               <li><a href="book.html">온라인 예약</a></li>
               <li><a href="book.html?my=1">예약 확인 · 취소</a></li>
             </ul>
@@ -118,6 +119,7 @@
       ['주소', `${esc(CLINIC.addressKo)}<br><span class="muted">${esc(CLINIC.address)}</span>`],
       ['진료시간', CLINIC.hours.map(h => `${esc(h.day)} ${esc(h.time)}`).join('<br>')],
       ['전화', esc(CLINIC.phone)],
+      ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a>`],
       ['상담', `<a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a> · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>`],
       ['결제', '엔화 현금 · VISA/Master/JCB/AMEX · 카카오페이 · 네이버페이'],
     ].map(([k, v]) => `<li><b>${k}</b><span>${v}</span></li>`).join('');
@@ -328,7 +330,7 @@
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
     $('#back').onclick = () => { state.step = 2; render(); };
     $('#submit').onclick = () => {
-      const code = 'JR' + Date.now().toString(36).toUpperCase().slice(-6);
+      const code = 'KR' + Date.now().toString(36).toUpperCase().slice(-6);
       const rec = { code, createdAt: new Date().toISOString(), status: 'pending', date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label, receive: p.rcv.title, extras: state.extras, mix: state.mix, total: p.total, info: { ...i }, screen: screens };
       save([rec, ...load()]);
       done(rec);
@@ -336,7 +338,7 @@
   }
 
   function kakaoText(r) {
-    return `[J Rich Clinic 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
+    return `[K-Rich Clinic 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
   }
 
   function done(r) {
