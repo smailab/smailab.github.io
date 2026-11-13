@@ -21,7 +21,7 @@
   const STORE_KEY = 'krich_bookings';
   /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
   const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' } : null;
-  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-outline ${extra}" href="tel:${CLINIC.phoneIntl}">📞 전화 예약</a>`;
+  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>💬 AI 상담</a>`;
 
   /* ---------- header / footer ---------- */
   function header() {
@@ -56,7 +56,7 @@
       </header>`;
     $('#menu-btn').addEventListener('click', () => $('#mobile-nav').classList.toggle('open'));
     document.querySelectorAll('#mobile-nav a').forEach(a => a.addEventListener('click', () => $('#mobile-nav').classList.remove('open')));
-    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.remove(); return; } a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
+    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.href = '#chat'; a.setAttribute('data-open-chat', ''); a.classList.remove('btn-kakao'); a.classList.add('btn-ai'); a.textContent = '💬 AI 상담'; return; } a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
     document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
   }
 
@@ -79,6 +79,7 @@
             <ul>
               ${CLINIC.line ? `<li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>` : ''}
               ${CLINIC.kakao ? `<li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>` : ''}
+              <li><a href="#chat" data-open-chat>💬 AI 상담 (24시간)</a></li>
               <li><a href="tel:${CLINIC.phoneIntl}">전화 예약 ${esc(CLINIC.phone)}</a></li>
               <li><a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약 (일본어)</a></li>
               <li><a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram @k_rich_clinic</a></li>
@@ -142,7 +143,7 @@
       ['진료시간', CLINIC.hours.map(h => `${esc(h.day)} ${esc(h.time)}`).join('<br>')],
       ['진료과목', esc(CLINIC.dept)],
       ['전화', `<a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`],
-      ['예약·상담', `<a href="book.html">온라인 예약</a> · <a href="tel:${CLINIC.phoneIntl}">전화</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.line ? ` · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>` : ''}${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
+      ['예약·상담', `<a href="book.html">온라인 예약</a> · <a href="#chat" data-open-chat>AI 상담</a> · <a href="tel:${CLINIC.phoneIntl}">전화</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.line ? ` · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>` : ''}${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
       ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a> · <a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram</a>`],
       ['결제', '엔화 현금 · VISA/Master/JCB/AMEX (간편결제는 예약 시 확인)'],
     ].map(([k, v]) => `<li><b>${k}</b><span>${v}</span></li>`).join('');
@@ -373,7 +374,7 @@
         ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">📞 ${esc(CLINIC.phone)}</a>`}
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
       </div>
-      <p class="muted" style="margin-top:14px">${CHAT ? CHAT.label.replace(' 상담', '') + ' 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.' : '급하시면 접수 시간 내 전화로 예약번호를 말씀해 주시면 바로 확인해 드립니다.'}</p></div>`;
+      <p class="muted" style="margin-top:14px">${CHAT ? CHAT.label.replace(' 상담', '') + ' 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.' : '급하시면 접수 시간 내 전화로 예약번호를 말씀해 주시면 바로 확인해 드립니다. 궁금한 점은 <a href="#chat" data-open-chat>AI 상담</a>에 물어보세요.'}</p></div>`;
     $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사됨 ✓'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
   }
 
