@@ -95,7 +95,8 @@ h3 { font-size: 17px; font-family: var(--sans); font-weight: 700; letter-spacing
 .btn-block { width: 100%; }
 .btn[disabled] { opacity: .4; cursor: not-allowed; }
 
-/* header */
+/* header – 래퍼가 sticky 기준을 막지 않도록 레이아웃에서 제외 */
+#site-header { display: contents; }
 .topbar { background: var(--deep); color: #E7DACB; font-size: 12.5px; text-align: center; padding: 9px 16px; letter-spacing: -.005em; }
 .topbar b { color: #fff; font-weight: 600; }
 .site-header { position: sticky; top: 0; z-index: 50; background: rgba(255,251,248,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
