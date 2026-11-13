@@ -110,7 +110,7 @@ ${faq}
   function mount() {
     const root = document.createElement('div');
     root.innerHTML = `
-      <button class="chat-fab" id="chat-fab" aria-label="AI 상담 열기">💬 <span>AI 상담</span></button>
+      <button class="chat-fab" id="chat-fab" aria-label="AI 상담 열기"><span>AI 상담</span></button>
       <div class="chat-panel" id="chat-panel" hidden>
         <div class="chat-head">
           <div><b>${esc(CHATBOT.title)}</b><small>OpenAI 기반 · 의료 상담이 아닌 안내용</small></div>
@@ -119,7 +119,7 @@ ${faq}
         <div class="chat-body" id="chat-body"></div>
         <div class="chat-quick" id="chat-quick"></div>
         <form class="chat-form" id="chat-form"><input id="chat-input" autocomplete="off" placeholder="궁금한 점을 입력하세요" maxlength="1000"><button class="btn btn-primary btn-sm" id="chat-send" type="submit">전송</button></form>
-        <div class="chat-foot">AI 답변은 참고용이며 처방 여부는 의사 진료 후 결정됩니다. 급한 문의는 ☎ <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a></div>
+        <div class="chat-foot">AI 답변은 참고용이며 처방 여부는 의사 진료 후 결정됩니다. 급한 문의는 <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a></div>
       </div>`;
     document.body.appendChild(root);
     const panel = $('#chat-panel'), body = $('#chat-body');
@@ -143,7 +143,7 @@ ${faq}
   function renderAll() {
     const body = $('#chat-body'); body.innerHTML = '';
     bubble('assistant', md(CHATBOT.greeting));
-    if (!configured()) bubble('system', 'AI 상담은 준비 중입니다. 지금은 전화(☎ ' + esc(CLINIC.phone) + ')로 문의해 주세요.<br><small>관리자: ⚙에서 테스트 키 입력 또는 <code>worker/</code> 프록시 배포 후 <code>CHATBOT.endpoint</code> 설정</small>');
+    if (!configured()) bubble('system', 'AI 상담은 준비 중입니다. 지금은 전화(' + esc(CLINIC.phone) + ')로 문의해 주세요.<br><small>관리자: ⚙에서 테스트 키 입력 또는 <code>worker/</code> 프록시 배포 후 <code>CHATBOT.endpoint</code> 설정</small>');
     history.forEach(m => bubble(m.role, md(m.content)));
   }
 
@@ -158,7 +158,7 @@ ${faq}
 
   /* ---------- OpenAI 호출 (스트리밍) ---------- */
   async function send(text) {
-    if (!configured()) { bubble('system', '아직 챗봇이 연결되지 않았습니다. 전화로 문의해 주세요 ☎ ' + esc(CLINIC.phone)); return; }
+    if (!configured()) { bubble('system', '아직 챗봇이 연결되지 않았습니다. 전화로 문의해 주세요. ' + esc(CLINIC.phone)); return; }
     history.push({ role: 'user', content: text }); saveHist();
     bubble('user', md(text));
     const id = 'm' + Date.now(); const el = bubble('assistant', '<span class="chat-typing">…</span>', id);
@@ -188,7 +188,7 @@ ${faq}
       if (!full) full = '죄송해요, 답변을 생성하지 못했습니다. 다시 시도해 주세요.';
       history.push({ role: 'assistant', content: full }); saveHist();
     } catch (e) {
-      el.querySelector('.chat-bubble').innerHTML = '⚠️ 연결에 실패했습니다. 잠시 후 다시 시도하거나 전화로 문의해 주세요 ☎ ' + esc(CLINIC.phone) + `<br><small class="muted">${esc(e.message)}</small>`;
+      el.querySelector('.chat-bubble').innerHTML = '연결에 실패했습니다. 잠시 후 다시 시도하거나 전화로 문의해 주세요. ' + esc(CLINIC.phone) + `<br><small class="muted">${esc(e.message)}</small>`;
       history.pop(); saveHist();
     } finally { $('#chat-send').disabled = false; $('#chat-body').scrollTop = 1e9; }
   }

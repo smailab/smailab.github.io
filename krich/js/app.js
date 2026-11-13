@@ -21,14 +21,14 @@
   const STORE_KEY = 'krich_bookings';
   const API = (typeof CHATBOT !== 'undefined' && CHATBOT.endpoint ? CHATBOT.endpoint.replace(/\/$/, '') : '');
   /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
-  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' } : null;
-  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>💬 AI 상담</a>`;
+  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '' } : null;
+  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>AI 상담</a>`;
 
   /* ---------- header / footer ---------- */
   function header() {
     const el = $('#site-header'); if (!el) return;
     el.innerHTML = `
-      <div class="topbar">🇰🇷 한일 양국 의사면허 원장의 한국어 진료 · <b>온라인 예약 시 초진 상담료 0엔</b> · 당일 처방</div>
+      <div class="topbar">한일 양국 의사면허 원장이 한국어로 진료합니다. <b>온라인 예약 시 초진 상담료 0엔</b></div>
       <header class="site-header">
         <div class="container">
           <a class="logo" href="index.html"><img src="brand/logo.svg" alt="K-RICH Clinic" class="logo-img"><small>FUKUOKA · 福岡</small></a>
@@ -57,8 +57,8 @@
       </header>`;
     $('#menu-btn').addEventListener('click', () => $('#mobile-nav').classList.toggle('open'));
     document.querySelectorAll('#mobile-nav a').forEach(a => a.addEventListener('click', () => $('#mobile-nav').classList.remove('open')));
-    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.href = '#chat'; a.setAttribute('data-open-chat', ''); a.classList.remove('btn-kakao'); a.classList.add('btn-ai'); a.textContent = '💬 AI 상담'; return; } a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
-    document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
+    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.href = '#chat'; a.setAttribute('data-open-chat', ''); a.classList.remove('btn-kakao'); a.textContent = 'AI 상담'; return; } a.href = CHAT.url; a.textContent = CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
+    document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = CLINIC.phone; });
   }
 
   function footer() {
@@ -80,7 +80,7 @@
             <ul>
               ${CLINIC.line ? `<li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>` : ''}
               ${CLINIC.kakao ? `<li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>` : ''}
-              <li><a href="#chat" data-open-chat>💬 AI 상담 (24시간)</a></li>
+              <li><a href="#chat" data-open-chat>AI 상담 (24시간)</a></li>
               <li><a href="tel:${CLINIC.phoneIntl}">전화 예약 ${esc(CLINIC.phone)}</a></li>
               <li><a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약 (일본어)</a></li>
               <li><a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram @k_rich_clinic</a></li>
@@ -96,7 +96,7 @@
         </div>
       </footer>
       <div class="sticky-cta">
-        ${chatBtn()}
+        <a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">전화 예약</a>
         <a class="btn btn-primary" href="book.html">온라인 예약</a>
       </div>`;
   }
@@ -104,23 +104,26 @@
   /* ---------- landing ---------- */
   function home() {
     const first = PRICES.pens[0];
-    $('#hero-price').innerHTML = `${yen(first.set4)} <small>세금 포함</small><span class="krw hero-krw" data-jpy="${first.set4}">(${krw(first.set4)})</span>`;
+    const ledger = $('#ledger');
+    if (ledger) ledger.innerHTML = PRICES.pens.map(p => `<div class="ledger-row">
+      <span class="ledger-dose">${p.dose}<span>mg · ${esc(p.weeks)}</span></span>
+      <span class="ledger-price">${yen(p.set4)}<small class="krw" data-jpy="${p.set4}">${krw(p.set4)}</small></span></div>`).join('');
 
-    $('#why-grid').innerHTML = WHY.map(w => `<div class="card"><div class="icon">${w.icon}</div><h3>${esc(w.title)}</h3><p>${esc(w.desc)}</p></div>`).join('');
+    $('#why-grid').innerHTML = WHY.map(w => `<div class="row-item"><h3>${esc(w.title)}</h3><p>${esc(w.desc)}</p></div>`).join('');
 
-    $('#dose-rows').innerHTML = PRICES.dosesInfo.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar" style="width:${(p.dose / 15) * 100}%"></div><span>${esc(p.weeks)}</span></div>`).join('');
+    $('#dose-rows').innerHTML = PRICES.dosesInfo.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar"></div><span>${esc(p.weeks)}</span></div>`).join('');
 
     $('#pen-rows').innerHTML = PRICES.pens.map(p => `<tr><td>마운자로 ${p.dose}mg × 4개 (4주분) ${p.first ? '<span class="tag">초진 시작 용량</span>' : ''}<span class="sub">${esc(p.weeks)} · 1펜 = 1주분 · 펜 1개당 ${yen(p.price)}</span></td><td class="num">${yen(p.set4)}<span class="krw" data-jpy="${p.set4}">(${krw(p.set4)})</span></td></tr>`).join('');
     $('#consult-rows').innerHTML = PRICES.consult.map(c => `<tr><td>${esc(c.name)}<span class="sub">${esc(c.note)}</span></td><td class="num">${c.price === 0 ? '¥0' : yen(c.price) + `<span class="krw" data-jpy="${c.price}">(${krw(c.price)})</span>`}</td></tr>`).join('');
 
     $('#pack-cards').innerHTML = PRICES.packs.map((pk, i) => {
       const base = first.price * pk.pens, total = Math.round(base * (1 - pk.discount));
-      return `<div class="pack ${i === 2 ? 'best' : ''}">${i === 2 ? '<span class="ribbon">BEST</span>' : ''}
+      return `<div class="pack">
         <h3>2.5mg ${esc(pk.label)}</h3>
         <div class="price">${yen(total)} <small>세금 포함</small><span class="krw" data-jpy="${total}">(${krw(total)})</span></div>
         ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : `<div class="save" style="color:var(--ink-3)">${pk.pens === 4 ? '기본 구성' : '4개 세트 × ' + (pk.pens / 4)}</div>`}
         <ul><li>원장 한국어 직접 진료</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
-        <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-block" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
+        <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-sm" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
     }).join('');
 
     $('#trial-chart').innerHTML = TRIAL.bars.map(b => `<div class="trial-row"><span class="tl">${esc(b.label)}</span><div class="tb"><div class="tf ${b.label === '위약' ? 'placebo' : ''}" style="width:${(b.pct / 25) * 100}%"></div></div><b>−${b.pct}%</b></div>`).join('');
@@ -131,13 +134,13 @@
       $('#compare-rows').innerHTML = PRICES.compare.map(c => { const k = c.krw || krwOf(c.jpy); return `<div class="cmp-row ${c.us ? 'us' : ''}"><div class="cl"><b>${esc(c.label)}</b><span class="muted">${esc(c.note)}</span></div><div class="cb"><div class="cf" style="width:${(k / maxKrw) * 100}%"></div></div><div class="cv">${c.jpy ? yen(c.jpy) + '<small>' + krw(c.jpy) + '</small>' : '약 ' + k.toLocaleString('ko-KR') + '원'}</div></div>`; }).join(''); };
     renderCompare(); document.addEventListener('fx', renderCompare);
 
-    $('#bring-grid').innerHTML = BRING.map(b => `<div class="card"><div class="icon">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
+    $('#bring-grid').innerHTML = BRING.map(b => `<div class="row-item"><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
     $('#qty-rows').innerHTML = QTY_GUIDE.map(q => `<tr><td>${esc(q.stay)}</td><td>${esc(q.shots)}</td><td class="num">${esc(q.home)}</td></tr>`).join('');
-    $('#checklist').innerHTML = CHECKLIST.map((c, i) => `<div class="card"><div class="icon" style="font-size:14px;font-weight:800;color:var(--gold)">0${i + 1}</div><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
+    $('#checklist').innerHTML = CHECKLIST.map(c => `<div class="row-item"><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
 
     $('#steps-list').innerHTML = STEPS.map(s => `<div class="step"><div class="n">${s.n}</div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p></div>`).join('');
-    $('#team-grid').innerHTML = DOCTORS.map(d => `<div class="card ${d.photo ? 'doctor' : ''}">${d.photo ? `<img class="avatar-photo" src="${d.photo}" alt="${esc(d.name)}">` : `<div class="avatar">${d.icon || '🩺'}</div>`}<div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p>${d.quote ? `<p class="quote">“${esc(d.quote)}”</p>` : ''}</div></div>`).join('');
-    $('#review-grid').innerHTML = REVIEWS.map(r => `<div class="review"><div class="stars">${'★'.repeat(r.stars)}</div><p>“${esc(r.text)}”</p><b>${esc(r.name)}</b></div>`).join('');
+    $('#team-grid').innerHTML = DOCTORS.map(d => `<div class="card ${d.photo ? 'doctor' : ''}">${d.photo ? `<img class="avatar-photo" src="${d.photo}" alt="${esc(d.name)}">` : ''}<div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p>${d.quote ? `<p class="quote">“${esc(d.quote)}”</p>` : ''}</div></div>`).join('');
+    $('#review-grid').innerHTML = REVIEWS.map(r => `<div class="review"><p>“${esc(r.text)}”</p><b>${esc(r.name)}</b></div>`).join('');
 
     $('#info-list').innerHTML = [
       ['주소', `${esc(CLINIC.addressKo)}<br><span class="muted">${esc(CLINIC.address)}</span>`],
@@ -325,7 +328,7 @@
     const screenMsg = () => {
       const on = SCREENING.filter(s => state.screen[s.id]);
       const block = on.filter(s => s.block), warn = on.filter(s => s.warn);
-      $('#screen-msg').innerHTML = block.length ? `<div class="notice red">⚠️ 체크하신 항목은 마운자로 처방이 <b>금기</b>에 해당합니다. 예약은 가능하지만 처방이 어려울 수 있으니 먼저 카카오톡으로 상담을 권장합니다.</div>` : warn.length ? `<div class="notice">ℹ️ 체크하신 항목은 진료 시 의사가 자세히 확인합니다. 관련 처방전·검사 결과가 있으면 사진으로 준비해 주세요.</div>` : '';
+      $('#screen-msg').innerHTML = block.length ? `<div class="notice red">체크하신 항목은 마운자로 처방이 <b>금기</b>에 해당합니다. 예약은 가능하지만 처방이 어려울 수 있으니 먼저 카카오톡으로 상담을 권장합니다.</div>` : warn.length ? `<div class="notice">체크하신 항목은 진료 시 의사가 자세히 확인합니다. 관련 처방전·검사 결과가 있으면 사진으로 준비해 주세요.</div>` : '';
     };
     el.querySelectorAll('input[data-s]').forEach(c => c.onchange = () => { state.screen[c.dataset.s] = c.checked; screenMsg(); }); screenMsg();
     $('#agree').onchange = e => state.agree = e.target.checked;
@@ -395,15 +398,15 @@
     stepper(); $('#stepper').querySelectorAll('div').forEach(d => d.className = 'done');
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
       <p class="desc">아래 예약번호를 캡처해 두세요. 스태프가 접수 시간(10:00~19:00) 내에 ${esc(r.info.contact)}(으)로 확정 안내를 드립니다.</p>
-      ${offline ? `<div class="notice red" style="text-align:left">⚠️ 네트워크 문제로 예약이 클리닉에 전달되지 않았습니다. 아래 "예약 내용 복사"를 눌러 전화(${esc(CLINIC.phone)})로 알려주세요.</div>` : ''}
+      ${offline ? `<div class="notice red" style="text-align:left">네트워크 문제로 예약이 클리닉에 전달되지 않았습니다. 아래 "예약 내용 복사"를 눌러 전화(${esc(CLINIC.phone)})로 알려주세요.</div>` : ''}
       <div class="code">${r.code}</div>
       <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yk(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
-        ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">📞 ${esc(CLINIC.phone)}</a>`}
+        ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`}
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
       </div>
       <p class="muted" style="margin-top:14px">${CHAT ? CHAT.label.replace(' 상담', '') + ' 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.' : '급하시면 접수 시간 내 전화로 예약번호를 말씀해 주시면 바로 확인해 드립니다. 궁금한 점은 <a href="#chat" data-open-chat>AI 상담</a>에 물어보세요.'}</p></div>`;
-    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사됨 ✓'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
+    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사했습니다'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
   }
 
   const ST_LABEL = { pending: '확정 대기', confirmed: '확정됨', done: '방문 완료', cancelled: '취소됨', noshow: '노쇼' };
