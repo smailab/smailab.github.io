@@ -48,7 +48,9 @@ const CHATBOT = { endpoint: 'https://krich-chat.<계정>.workers.dev', ... };
 |---|---|
 | `OPENAI_API_KEY` | 시크릿. `wrangler secret put`으로만 저장 |
 | `OPENAI_MODEL` | 기본 `gpt-4o-mini` (저렴·빠름). 더 높은 품질이 필요하면 `gpt-4o` 등으로 변경 |
-| `ALLOWED_ORIGINS` | 호출을 허용할 사이트 도메인(쉼표 구분). 다른 사이트가 키를 무단 사용하지 못하게 막음 |
+| `ALLOWED_ORIGINS` | 호출을 허용할 사이트 도메인(쉼표 구분). 다른 사이트가 키를 무단 사용하지 못하게 막음. 현재: `https://smailab.github.io`, `https://krich-clinic.pages.dev` |
+
+도메인을 추가하려면 `wrangler.toml`의 `ALLOWED_ORIGINS`에 쉼표로 덧붙이고 `npx wrangler deploy`를 실행하세요. 재배포해도 `OPENAI_API_KEY` 시크릿은 유지됩니다. Pages 미리보기 주소(`<해시>.krich-clinic.pages.dev`)는 정확히 일치하지 않으므로 허용되지 않습니다.
 
 ## 비용·보안 메모
 - 대화 1회당 시스템 프롬프트(약 4~5천 토큰) + 질문·답변이 과금됩니다. gpt-4o-mini 기준 1회 수 원 수준.
