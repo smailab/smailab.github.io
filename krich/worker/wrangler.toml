@@ -5,7 +5,7 @@ compatibility_date = "2026-01-01"
 [vars]
 OPENAI_MODEL = "gpt-4o-mini"
 # 사이트 도메인만 허용, 쉼표 구분 (로컬 테스트 시 http://localhost:8765 추가)
-ALLOWED_ORIGINS = "https://smailab.github.io,https://krich-clinic.pages.dev"
+ALLOWED_ORIGINS = "https://smailab.github.io,https://krich-clinic.pages.dev,https://krich-site.hyunsh99.workers.dev"
 # 인증 메일 발신 주소. RESEND_API_KEY를 등록해야 이메일 인증이 켜집니다.
 MAIL_FROM = "K-RICH CLINIC <onboarding@resend.dev>"
 

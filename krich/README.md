@@ -9,7 +9,9 @@
 - 원장 프로필·경력·사진(`img/doctor.jpg`), 로고(`brand/logo.svg`), 브랜드 색상(베이지 #F4EEEA/#E5D8CD, 브라운 #987F65/#402D10/#1A0F04), 세리프 헤딩
 - 마운자로 펜 가격은 클리닉 제공 실제 가격(4개 세트: 2.5mg ¥17,800 / 5mg ¥29,800 / 7.5mg ¥46,800 / 10mg ¥56,800). 카카오톡 채널은 공식 사이트에 없어 `CLINIC.kakao = null` (LINE으로 대체, URL 입력 시 자동 전환)
 - 역에서의 도보 시간은 지도 기준 추정치(약 4분/8분)
-주소: `https://smailab.github.io/krich/` (Cloudflare Pages 프로젝트 `krich-clinic`도 준비됨 – GitHub 연결 시 `krich-clinic.pages.dev`)
+주소
+- GitHub Pages: `https://smailab.github.io/krich/` (푸시하면 자동 반영)
+- Cloudflare Workers: `https://krich-site.hyunsh99.workers.dev` (`krich/site/` – 배포 명령 필요, `site/README.md` 참고)
 
 ## 페이지
 | 파일 | 내용 |
@@ -73,7 +75,7 @@
 - 한국·일본 가격 비교: 주간경향(2026-09), 일본 온라인 클리닉 공식 가격표(2026-11), 2026-08-01 일본 약가 25% 인하
 - 규정·가격은 바뀔 수 있으므로 운영 시 주기적으로 갱신 필요
 - `js/app.js` – 공통 헤더/푸터, 랜딩 렌더링, 예약 단계 로직
-- `js/chat.js` – AI 상담 위젯 (OpenAI), `worker/openai-proxy.js` – API 키를 숨기는 Cloudflare Worker 프록시
+- `js/chat.js` – AI 상담 위젯 (OpenAI), `worker/openai-proxy.js` – 예약·회원·챗봇 API 워커, `site/` – 사이트를 Cloudflare에서 서빙하는 워커
 
 ## 운영 전 해야 할 일
 1. `js/data.js`의 `CLINIC`에서 카카오톡 채널 URL(`kakao`), 휴진일(`closedDates`), 점심시간(`lunch`) 확인·입력
