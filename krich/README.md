@@ -1,6 +1,14 @@
-# K-Rich Clinic (후쿠오카) – 마운자로 클리닉 예약 사이트
+# K-RICH CLINIC (후쿠오카) – 마운자로 클리닉 예약 사이트
 
 한국인 방문객 대상 일본 마운자로(Mounjaro) 처방 클리닉 랜딩 + 온라인 예약 (정적 사이트, GitHub Pages).
+실제 병원: K-RICH CLINIC (후쿠오카시 주오구 다이묘, 미용피부과·재생의료, 원장 김민규) – 공식 사이트 https://k-rich.jp/
+
+## 공식 사이트에서 확인해 반영한 정보 (2026-11-13)
+- 주소 〒810-0041 福岡県福岡市中央区大名2丁目12-18 GMビル赤坂 6階, 전화 092-406-5533, 접수 10:00~19:00, 휴진 비정기
+- LINE 공식계정 https://lin.ee/eucnbtM, 공식 WEB 예약(medical-force), Instagram @k_rich_clinic, Google Maps 링크
+- 원장 프로필·경력·사진(`img/doctor.jpg`), 로고(`brand/logo.svg`), 브랜드 색상(베이지 #F4EEEA/#E5D8CD, 브라운 #987F65/#402D10/#1A0F04), 세리프 헤딩
+- **마운자로 가격은 공식 요금표(k-rich.jp/price)에 없음** → `PRICES`는 샘플. 카카오톡 채널은 공식 사이트에 없어 `CLINIC.kakao = null` (LINE으로 대체, URL 입력 시 자동 전환)
+- 역에서의 도보 시간은 지도 기준 추정치(약 4분/8분)
 주소: `https://smailab.github.io/krich/`
 
 ## 페이지
@@ -15,7 +23,7 @@
 - 초진은 2.5mg만 선택 가능, 재진은 모든 용량 선택 가능
 - 1회 최대 12개(한국 휴대 반입 한도 3개월분) – `CLINIC.maxPens`
 - 수령 방법: 내원 수령(무료) / 호텔 냉장 배송(¥1,100, 체류·숙소 입력 필수) – `RECEIVE`
-- 수요일 휴진, 평일 10:00–19:00 / 주말 10:00–18:00, 점심 13:00–14:00 제외, 마감 30분 전까지, 60일 이내 예약
+- 접수 10:00–19:00 매일(공식: 비정기 휴진 → `CLINIC.closedDates`에 날짜 추가), 점심 13:00–14:00 제외, 마감 30분 전까지, 60일 이내 예약
 - 사전 문진: 갑상선 수질암·MEN2 가족력, 임신·수유 → 금기 경고 / 췌장염·GLP-1 병용·당뇨약·위장질환 → 주의 안내
 - BMI 자동 계산 (23 미만이면 노란색 표시)
 - 예약 완료 시 예약번호(KR…) 발급, "예약 내용 복사 후 카카오톡 열기" 버튼으로 카카오톡 채널에 전달
@@ -34,10 +42,10 @@
 - `js/app.js` – 공통 헤더/푸터, 랜딩 렌더링, 예약 단계 로직
 
 ## 운영 전 해야 할 일
-1. `js/data.js`의 `CLINIC` (주소, 전화, 카카오톡 채널 URL, LINE URL, 진료시간, 휴진일, 구글맵 링크) 교체
+1. `js/data.js`의 `CLINIC`에서 카카오톡 채널 URL(`kakao`), 휴진일(`closedDates`), 점심시간(`lunch`) 확인·입력
 2. `PRICES` (펜 단가, 패키지 할인, 상담료, 옵션)를 실제 가격으로 교체 – 가격표·히어로 카드·예약 요약에 자동 반영
 3. `DOCTORS`, `REVIEWS`, 통계 수치(index.html `.stats`)를 실제 내용으로 교체
-4. `index.html`의 지도 iframe `src`를 실제 클리닉 좌표의 Google Maps embed 주소로 교체
+4. 지도 iframe은 `CLINIC.mapEmbed`(주소 검색 embed)로 표시 – 필요 시 정확한 좌표 embed로 교체
 5. 예약 데이터를 실제로 받으려면 백엔드 연동 필요 (현재는 `js/app.js` `#submit` 핸들러에서 localStorage에만 저장) – 예: Google Forms/Sheets, Formspree, Supabase, 예약 SaaS
 6. 시간대별 마감 슬롯은 데모용 의사난수 (`slotsFor`) – 실제 스케줄로 교체
 7. 의료광고·의약품 반입 안내 문구는 일본 의료법·한국 관세/식약처 규정에 맞게 법률 검토

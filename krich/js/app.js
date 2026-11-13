@@ -4,15 +4,16 @@
   const yen = n => '¥' + Number(n).toLocaleString('ja-JP');
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STORE_KEY = 'krich_bookings';
+  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' };
 
   /* ---------- header / footer ---------- */
   function header() {
     const el = $('#site-header'); if (!el) return;
     el.innerHTML = `
-      <div class="topbar">🇰🇷 한국어 전담 코디네이터 상주 · <b>온라인 예약 시 초진 상담료 0엔</b> · 당일 처방</div>
+      <div class="topbar">🇰🇷 한일 양국 의사면허 원장의 한국어 진료 · <b>온라인 예약 시 초진 상담료 0엔</b> · 당일 처방</div>
       <header class="site-header">
         <div class="container">
-          <a class="logo" href="index.html"><span class="mark">K</span><span>K-Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
+          <a class="logo" href="index.html"><img src="brand/logo.svg" alt="K-RICH Clinic" class="logo-img"><small>FUKUOKA · 福岡</small></a>
           <nav class="nav">
             <a href="index.html#mounjaro">마운자로란</a>
             <a href="index.html#price">가격</a>
@@ -22,7 +23,7 @@
             <a href="book.html?my=1">예약 확인</a>
           </nav>
           <div class="header-cta">
-            <a class="btn btn-kakao btn-sm" href="${CLINIC.kakao}" target="_blank" rel="noopener">💬 카카오톡 상담</a>
+            <a class="btn ${CHAT.cls} btn-sm" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>
             <a class="btn btn-primary btn-sm" href="book.html">온라인 예약</a>
           </div>
           <button class="menu-btn" id="menu-btn" aria-label="메뉴">☰</button>
@@ -38,7 +39,8 @@
       </header>`;
     $('#menu-btn').addEventListener('click', () => $('#mobile-nav').classList.toggle('open'));
     document.querySelectorAll('#mobile-nav a').forEach(a => a.addEventListener('click', () => $('#mobile-nav').classList.remove('open')));
-    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => a.href = CLINIC.kakao);
+    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
+    document.querySelectorAll('#tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
   }
 
   function footer() {
@@ -47,9 +49,9 @@
       <footer class="site-footer">
         <div class="container">
           <div>
-            <a class="logo" href="index.html"><span class="mark">K</span><span>K-Rich Clinic<small>FUKUOKA · 福岡</small></span></a>
-            <p style="margin:14px 0 6px">${esc(CLINIC.nameJa)} · ${esc(CLINIC.address)}</p>
-            <p style="margin:0">TEL ${esc(CLINIC.phone)} · ${esc(CLINIC.email)}</p>
+            <a class="logo" href="index.html"><img src="brand/logo.svg" alt="K-RICH Clinic" class="logo-img inv"><small>FUKUOKA · 福岡</small></a>
+            <p style="margin:14px 0 6px">${esc(CLINIC.nameJa)} · ${esc(CLINIC.dept)}<br>${esc(CLINIC.address)}</p>
+            <p style="margin:0">TEL <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>${CLINIC.email ? ' · ' + esc(CLINIC.email) : ''}</p>
           </div>
           <div>
             <h4>진료시간</h4>
@@ -58,8 +60,11 @@
           <div>
             <h4>상담 · 예약</h4>
             <ul>
-              <li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>
               <li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>
+              ${CLINIC.kakao ? `<li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>` : ''}
+              <li><a href="tel:${CLINIC.phoneIntl}">전화 예약 ${esc(CLINIC.phone)}</a></li>
+              <li><a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약 (일본어)</a></li>
+              <li><a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram @k_rich_clinic</a></li>
               <li><a href="${CLINIC.site}" target="_blank" rel="noopener">공식 사이트 (k-rich.jp)</a></li>
               <li><a href="book.html">온라인 예약</a></li>
               <li><a href="book.html?my=1">예약 확인 · 취소</a></li>
@@ -67,12 +72,12 @@
           </div>
           <div class="legal">
             마운자로(Mounjaro)는 일라이 릴리의 등록상표입니다. 일본에서 2형 당뇨병 치료제로 승인된 의약품이며, 체중 관리 목적 사용은 적응증 외 사용으로 본 클리닉은 자유진료(비보험)로 처방합니다. 자유진료 의약품은 일본 의약품 부작용 피해 구제 제도의 대상이 아닙니다. 흔한 부작용: 메스꺼움·설사·식욕 저하. 의약품은 의사의 진료 후 처방 여부가 결정되며 효과와 부작용에는 개인차가 있습니다. 한국 반입 기준(2026-11-12 시행, 3개월분까지 휴대 반입)은 변경될 수 있으니 출국 전 관세청(125)에 확인하세요. 본 사이트의 내용은 의학적 진단을 대체하지 않습니다. 개인정보는 예약·진료 목적으로만 사용됩니다.<br>
-            © ${new Date().getFullYear()} ${esc(CLINIC.name)}. All rights reserved.
+            © ${new Date().getFullYear()} ${esc(CLINIC.nameJa)}. All rights reserved.
           </div>
         </div>
       </footer>
       <div class="sticky-cta">
-        <a class="btn btn-kakao" href="${CLINIC.kakao}" target="_blank" rel="noopener">💬 카카오톡 상담</a>
+        <a class="btn ${CHAT.cls}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>
         <a class="btn btn-primary" href="book.html">온라인 예약</a>
       </div>`;
   }
@@ -112,19 +117,21 @@
     $('#checklist').innerHTML = CHECKLIST.map((c, i) => `<div class="card"><div class="icon" style="font-size:14px;font-weight:800;color:var(--gold)">0${i + 1}</div><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
 
     $('#steps-list').innerHTML = STEPS.map(s => `<div class="step"><div class="n">${s.n}</div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p></div>`).join('');
-    $('#team-grid').innerHTML = DOCTORS.map((d, i) => `<div class="card"><div class="avatar">${i === 0 ? '🩺' : '🙋‍♀️'}</div><div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p></div></div>`).join('');
+    $('#team-grid').innerHTML = DOCTORS.map(d => `<div class="card ${d.photo ? 'doctor' : ''}">${d.photo ? `<img class="avatar-photo" src="${d.photo}" alt="${esc(d.name)}">` : `<div class="avatar">${d.icon || '🩺'}</div>`}<div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p>${d.quote ? `<p class="quote">“${esc(d.quote)}”</p>` : ''}</div></div>`).join('');
     $('#review-grid').innerHTML = REVIEWS.map(r => `<div class="review"><div class="stars">${'★'.repeat(r.stars)}</div><p>“${esc(r.text)}”</p><b>${esc(r.name)}</b></div>`).join('');
 
     $('#info-list').innerHTML = [
       ['주소', `${esc(CLINIC.addressKo)}<br><span class="muted">${esc(CLINIC.address)}</span>`],
       ['진료시간', CLINIC.hours.map(h => `${esc(h.day)} ${esc(h.time)}`).join('<br>')],
-      ['전화', esc(CLINIC.phone)],
-      ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a>`],
-      ['상담', `<a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a> · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>`],
-      ['결제', '엔화 현금 · VISA/Master/JCB/AMEX · 카카오페이 · 네이버페이'],
+      ['진료과목', esc(CLINIC.dept)],
+      ['전화', `<a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`],
+      ['예약·상담', `<a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
+      ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a> · <a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram</a>`],
+      ['결제', '엔화 현금 · VISA/Master/JCB/AMEX (간편결제는 예약 시 확인)'],
     ].map(([k, v]) => `<li><b>${k}</b><span>${v}</span></li>`).join('');
     $('#map-addr').textContent = CLINIC.addressKo;
     $('#map-link').href = CLINIC.mapUrl;
+    if (CLINIC.mapEmbed) $('#map-frame').src = CLINIC.mapEmbed;
 
     $('#faq-list').innerHTML = FAQ.map(f => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('');
   }
@@ -191,7 +198,7 @@
       <p class="muted" style="margin:10px 0 0">일본에서 맞을 양 + 한국에 가져갈 양을 합쳐 최대 12개(3개월분)까지 처방합니다. 초진은 2.5mg 4개 + 5mg 8개처럼 증량 구성으로 드립니다.</p>
       <h3 style="margin:22px 0 10px">수령 방법</h3>
       <div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yen(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>
-      ${state.receive === 'hotel' ? '<div class="notice" style="margin-top:10px">호텔 배송은 온라인 진료(카카오톡 영상) 후 1~3영업일에 도착합니다. 체크아웃 직전 수령은 피하고, 호텔에 냉장 택배가 온다고 미리 알려주세요. 해외 배송은 불가합니다.</div>' : ''}
+      ${state.receive === 'hotel' ? '<div class="notice" style="margin-top:10px">호텔 배송은 온라인 진료(LINE 영상) 후 1~3영업일에 도착합니다. 체크아웃 직전 수령은 피하고, 호텔에 냉장 택배가 온다고 미리 알려주세요. 해외 배송은 불가합니다.</div>' : ''}
       <h3 style="margin:22px 0 10px">추가 옵션</h3>
       <div class="grid" style="gap:8px">${PRICES.extras.map(e => `<label class="check"><input type="checkbox" data-e="${e.id}" ${state.extras.includes(e.id) ? 'checked' : ''}><span><b>${esc(e.name)}</b> &nbsp;<span style="color:var(--green);font-weight:700">${e.price ? yen(e.price) : '무료'}</span>${e.note ? `<br><span class="muted">${esc(e.note)}</span>` : ''}</span></label>`).join('')}</div>
       <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4개 + 5mg 8개로 받고 싶어요 / 혈액검사 원해요">${esc(state.mix)}</textarea></label>
@@ -210,7 +217,7 @@
   const pad = n => String(n).padStart(2, '0');
   const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   function fmtDate(k) { const [y, m, d] = k.split('-').map(Number); const dt = new Date(y, m - 1, d); return `${y}.${pad(m)}.${pad(d)} (${'일월화수목금토'[dt.getDay()]})`; }
-  function isClosed(d) { return CLINIC.closedWeekdays.includes(d.getDay()); }
+  function isClosed(d) { return CLINIC.closedWeekdays.includes(d.getDay()) || (CLINIC.closedDates || []).includes(key(d)); }
   function slotsFor(k) {
     const [y, m, d] = k.split('-').map(Number); const dt = new Date(y, m - 1, d);
     const weekend = dt.getDay() === 0 || dt.getDay() === 6;
@@ -241,7 +248,7 @@
     }
     const prevOk = new Date(y, m, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
     const nextOk = new Date(y, m + 1, 1) <= maxD;
-    el.innerHTML = `<h2>2. ${state.receive === 'hotel' ? '온라인 진료' : '내원'} 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 수요일 휴진, 당일 예약은 카카오톡으로 문의해 주세요.${state.receive === 'hotel' ? ' 호텔 배송은 진료일로부터 1~3영업일 뒤 도착하므로 체크아웃 4일 전까지 진료를 잡아주세요.' : ''}</p>
+    el.innerHTML = `<h2>2. ${state.receive === 'hotel' ? '온라인 진료' : '내원'} 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 접수 10:00~19:00, 휴진은 비정기이므로 확정 안내 시 함께 알려드립니다. 당일 예약은 LINE 또는 전화로 문의해 주세요.${state.receive === 'hotel' ? ' 호텔 배송은 진료일로부터 1~3영업일 뒤 도착하므로 체크아웃 4일 전까지 진료를 잡아주세요.' : ''}</p>
       <div class="cal-nav"><button id="prev" ${prevOk ? '' : 'disabled'}>‹</button><b>${y}년 ${m + 1}월</b><button id="next-m" ${nextOk ? '' : 'disabled'}>›</button></div>
       <div class="cal">${cells}</div>
       <div id="slots-wrap">${state.date ? slotsHtml() : '<p class="muted" style="margin-top:16px">날짜를 선택하면 가능한 시간이 표시됩니다.</p>'}</div>
@@ -268,7 +275,7 @@
         <label class="f">생년월일 *<input id="birth" type="date" value="${esc(i.birth || '')}" max="${key(new Date())}"></label>
         <label class="f">성별<select id="sex"><option value="">선택</option><option ${i.sex === 'F' ? 'selected' : ''} value="F">여성</option><option ${i.sex === 'M' ? 'selected' : ''} value="M">남성</option></select></label>
         <label class="f">휴대폰 (한국) *<input id="phone" value="${esc(i.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></label>
-        <label class="f">카카오톡 ID 또는 이메일 *<input id="contact" value="${esc(i.contact || '')}" placeholder="예약 확정을 보내드립니다"></label>
+        <label class="f">LINE ID · 카카오톡 ID 또는 이메일 *<input id="contact" value="${esc(i.contact || '')}" placeholder="예약 확정을 보내드립니다"></label>
         <label class="f">키 (cm) *<input id="height" type="number" value="${esc(i.height || '')}" placeholder="165" inputmode="decimal"></label>
         <label class="f">몸무게 (kg) *<input id="weight" type="number" value="${esc(i.weight || '')}" placeholder="70" inputmode="decimal"></label>
         <div class="full bmi-box"><span>BMI <span class="muted">(자동 계산 · 보통 23 이상 처방 대상)</span></span><b id="bmi">-</b></div>
@@ -309,7 +316,7 @@
     const p = price(), i = state.info, el = $('#step');
     const h = +i.height / 100, bmi = h ? (+i.weight / (h * h)).toFixed(1) : '-';
     const screens = SCREENING.filter(s => state.screen[s.id]).map(s => s.label);
-    el.innerHTML = `<h2>4. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 코디네이터가 확인 후 카카오톡으로 확정 안내를 드립니다.</p>
+    el.innerHTML = `<h2>4. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 스태프가 확인 후 LINE(또는 입력하신 연락처)으로 확정 안내를 드립니다.</p>
       <div class="confirm"><dl>
         <div><dt>일시</dt><dd>${fmtDate(state.date)} ${state.time}</dd></div>
         <div><dt>구분</dt><dd>${state.visit === 'first' ? '초진' : '재진'} · 마운자로 ${p.pen.dose}mg · ${esc(p.pk.label)}</dd></div>
@@ -326,7 +333,7 @@
         ${screens.length ? `<div><dt>문진 해당</dt><dd style="color:var(--red)">${screens.map(esc).join('<br>')}</dd></div>` : '<div><dt>문진</dt><dd>해당 사항 없음</dd></div>'}
         <div><dt>예상 금액</dt><dd style="color:var(--green);font-weight:900">${yen(p.total)} <span class="muted">(원내 결제)</span></dd></div>
       </dl></div>
-      <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 카카오톡으로 꼭 취소해 주세요.</div>
+      <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 LINE·전화로 꼭 취소해 주세요.</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
     $('#back').onclick = () => { state.step = 2; render(); };
     $('#submit').onclick = () => {
@@ -338,26 +345,26 @@
   }
 
   function kakaoText(r) {
-    return `[K-Rich Clinic 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
+    return `[K-RICH CLINIC 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
   }
 
   function done(r) {
     stepper(); $('#stepper').querySelectorAll('div').forEach(d => d.className = 'done');
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
-      <p class="desc">아래 예약번호를 캡처해 두세요. 코디네이터가 영업시간 내 카카오톡(${esc(r.info.contact)})으로 확정 안내를 드립니다.</p>
+      <p class="desc">아래 예약번호를 캡처해 두세요. 스태프가 접수 시간(10:00~19:00) 내에 ${esc(r.info.contact)}(으)로 확정 안내를 드립니다.</p>
       <div class="code">${r.code}</div>
       <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yen(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
-        <button class="btn btn-kakao" id="copy">예약 내용 복사 후 카카오톡 열기</button>
+        <button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
       </div>
-      <p class="muted" style="margin-top:14px">카카오톡 채널에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.</p></div>`;
-    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); } catch {} window.open(CLINIC.kakao, '_blank'); };
+      <p class="muted" style="margin-top:14px">${CHAT.label.replace(' 상담', '')} 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다. 전화: <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a></p></div>`;
+    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); } catch {} window.open(CHAT.url, '_blank'); };
   }
 
   function renderMy() {
     $('#stepper').style.display = 'none';
-    $('#summary').innerHTML = `<h3>안내</h3><p style="font-size:14px;color:var(--ink-2);margin:0">예약 내역은 이 브라우저에만 저장됩니다. 다른 기기에서 확인하시려면 예약번호로 카카오톡에 문의해 주세요.</p><a class="btn btn-primary btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
+    $('#summary').innerHTML = `<h3>안내</h3><p style="font-size:14px;color:var(--ink-2);margin:0">예약 내역은 이 브라우저에만 저장됩니다. 다른 기기에서 확인하시려면 예약번호로 LINE 또는 전화로 문의해 주세요.</p><a class="btn btn-primary btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
     const list = load();
     $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">예약 요청·확정 내역을 확인하고 취소할 수 있습니다.</p>` +
       (list.length ? `<div class="my-list">${list.map(r => `<div class="my-item"><div><b>${fmtDate(r.date)} ${r.time}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${esc(r.info.name)}<br><span class="muted">예약번호 ${r.code}</span></div><div style="text-align:right"><span class="st ${r.status === 'cancel' ? 'cancel' : ''}">${r.status === 'cancel' ? '취소됨' : '확정 대기'}</span><br>${r.status !== 'cancel' ? `<button class="btn btn-outline btn-sm" data-c="${r.code}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted">저장된 예약이 없습니다.</p>');
