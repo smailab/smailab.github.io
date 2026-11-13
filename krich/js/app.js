@@ -20,15 +20,26 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STORE_KEY = 'krich_bookings';
   const API = (typeof CHATBOT !== 'undefined' && CHATBOT.endpoint ? CHATBOT.endpoint.replace(/\/$/, '') : '');
+  const AUTH_KEY = 'krich_session', ACC_KEY = 'krich_account';
+  const authToken = () => { try { return localStorage.getItem(AUTH_KEY) || ''; } catch { return ''; } };
+  const account = () => { try { return JSON.parse(localStorage.getItem(ACC_KEY) || 'null'); } catch { return null; } };
+  const setAuth = (token, acc) => { try { token ? localStorage.setItem(AUTH_KEY, token) : localStorage.removeItem(AUTH_KEY); acc ? localStorage.setItem(ACC_KEY, JSON.stringify(acc)) : localStorage.removeItem(ACC_KEY); } catch {} };
+  async function apiCall(path, opts = {}) {
+    const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(authToken() ? { Authorization: 'Bearer ' + authToken() } : {}), ...(opts.headers || {}) } });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && path.startsWith('/account/') && path !== '/account/login' && path !== '/account/register') setAuth('', null);
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
   /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
-  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' } : null;
-  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>💬 AI 상담</a>`;
+  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '' } : null;
+  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>AI 상담</a>`;
 
   /* ---------- header / footer ---------- */
   function header() {
     const el = $('#site-header'); if (!el) return;
     el.innerHTML = `
-      <div class="topbar">🇰🇷 한일 양국 의사면허 원장의 한국어 진료 · <b>온라인 예약 시 초진 상담료 0엔</b> · 당일 처방</div>
+      <div class="topbar">한일 양국 의사면허 원장이 한국어로 진료합니다. <b>온라인 예약 시 초진 상담료 0엔</b></div>
       <header class="site-header">
         <div class="container">
           <a class="logo" href="index.html"><img src="brand/logo.svg" alt="K-RICH Clinic" class="logo-img"><small>FUKUOKA · 福岡</small></a>
@@ -38,7 +49,7 @@
             <a href="index.html#flow">진료 절차</a>
             <a href="index.html#access">오시는 길</a>
             <a href="index.html#faq">FAQ</a>
-            <a href="book.html?my=1">예약 확인</a>
+            <a href="book.html?my=1" id="nav-my">예약 확인</a>
           </nav>
           <div class="header-cta">
             ${chatBtn('btn-sm')}
@@ -57,8 +68,10 @@
       </header>`;
     $('#menu-btn').addEventListener('click', () => $('#mobile-nav').classList.toggle('open'));
     document.querySelectorAll('#mobile-nav a').forEach(a => a.addEventListener('click', () => $('#mobile-nav').classList.remove('open')));
-    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.href = '#chat'; a.setAttribute('data-open-chat', ''); a.classList.remove('btn-kakao'); a.classList.add('btn-ai'); a.textContent = '💬 AI 상담'; return; } a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
-    document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
+    const acc = account();
+    if (acc) document.querySelectorAll('#nav-my').forEach(a => { a.textContent = acc.name + '님 예약'; });
+    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.href = '#chat'; a.setAttribute('data-open-chat', ''); a.classList.remove('btn-kakao'); a.textContent = 'AI 상담'; return; } a.href = CHAT.url; a.textContent = CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
+    document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = CLINIC.phone; });
   }
 
   function footer() {
@@ -80,7 +93,7 @@
             <ul>
               ${CLINIC.line ? `<li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>` : ''}
               ${CLINIC.kakao ? `<li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>` : ''}
-              <li><a href="#chat" data-open-chat>💬 AI 상담 (24시간)</a></li>
+              <li><a href="#chat" data-open-chat>AI 상담 (24시간)</a></li>
               <li><a href="tel:${CLINIC.phoneIntl}">전화 예약 ${esc(CLINIC.phone)}</a></li>
               <li><a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약 (일본어)</a></li>
               <li><a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram @k_rich_clinic</a></li>
@@ -96,7 +109,7 @@
         </div>
       </footer>
       <div class="sticky-cta">
-        ${chatBtn()}
+        <a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">전화 예약</a>
         <a class="btn btn-primary" href="book.html">온라인 예약</a>
       </div>`;
   }
@@ -104,23 +117,26 @@
   /* ---------- landing ---------- */
   function home() {
     const first = PRICES.pens[0];
-    $('#hero-price').innerHTML = `${yen(first.set4)} <small>세금 포함</small><span class="krw hero-krw" data-jpy="${first.set4}">(${krw(first.set4)})</span>`;
+    const ledger = $('#ledger');
+    if (ledger) ledger.innerHTML = PRICES.pens.map(p => `<div class="ledger-row">
+      <span class="ledger-dose">${p.dose}<span>mg · ${esc(p.weeks)}</span></span>
+      <span class="ledger-price">${yen(p.set4)}<small class="krw" data-jpy="${p.set4}">${krw(p.set4)}</small></span></div>`).join('');
 
-    $('#why-grid').innerHTML = WHY.map(w => `<div class="card"><div class="icon">${w.icon}</div><h3>${esc(w.title)}</h3><p>${esc(w.desc)}</p></div>`).join('');
+    $('#why-grid').innerHTML = WHY.map(w => `<div class="row-item"><h3>${esc(w.title)}</h3><p>${esc(w.desc)}</p></div>`).join('');
 
-    $('#dose-rows').innerHTML = PRICES.dosesInfo.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar" style="width:${(p.dose / 15) * 100}%"></div><span>${esc(p.weeks)}</span></div>`).join('');
+    $('#dose-rows').innerHTML = PRICES.dosesInfo.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar"></div><span>${esc(p.weeks)}</span></div>`).join('');
 
     $('#pen-rows').innerHTML = PRICES.pens.map(p => `<tr><td>마운자로 ${p.dose}mg × 4개 (4주분) ${p.first ? '<span class="tag">초진 시작 용량</span>' : ''}<span class="sub">${esc(p.weeks)} · 1펜 = 1주분 · 펜 1개당 ${yen(p.price)}</span></td><td class="num">${yen(p.set4)}<span class="krw" data-jpy="${p.set4}">(${krw(p.set4)})</span></td></tr>`).join('');
     $('#consult-rows').innerHTML = PRICES.consult.map(c => `<tr><td>${esc(c.name)}<span class="sub">${esc(c.note)}</span></td><td class="num">${c.price === 0 ? '¥0' : yen(c.price) + `<span class="krw" data-jpy="${c.price}">(${krw(c.price)})</span>`}</td></tr>`).join('');
 
     $('#pack-cards').innerHTML = PRICES.packs.map((pk, i) => {
       const base = first.price * pk.pens, total = Math.round(base * (1 - pk.discount));
-      return `<div class="pack ${i === 2 ? 'best' : ''}">${i === 2 ? '<span class="ribbon">BEST</span>' : ''}
+      return `<div class="pack">
         <h3>2.5mg ${esc(pk.label)}</h3>
         <div class="price">${yen(total)} <small>세금 포함</small><span class="krw" data-jpy="${total}">(${krw(total)})</span></div>
         ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : `<div class="save" style="color:var(--ink-3)">${pk.pens === 4 ? '기본 구성' : '4개 세트 × ' + (pk.pens / 4)}</div>`}
         <ul><li>원장 한국어 직접 진료</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
-        <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-block" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
+        <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-sm" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
     }).join('');
 
     $('#trial-chart').innerHTML = TRIAL.bars.map(b => `<div class="trial-row"><span class="tl">${esc(b.label)}</span><div class="tb"><div class="tf ${b.label === '위약' ? 'placebo' : ''}" style="width:${(b.pct / 25) * 100}%"></div></div><b>−${b.pct}%</b></div>`).join('');
@@ -131,13 +147,13 @@
       $('#compare-rows').innerHTML = PRICES.compare.map(c => { const k = c.krw || krwOf(c.jpy); return `<div class="cmp-row ${c.us ? 'us' : ''}"><div class="cl"><b>${esc(c.label)}</b><span class="muted">${esc(c.note)}</span></div><div class="cb"><div class="cf" style="width:${(k / maxKrw) * 100}%"></div></div><div class="cv">${c.jpy ? yen(c.jpy) + '<small>' + krw(c.jpy) + '</small>' : '약 ' + k.toLocaleString('ko-KR') + '원'}</div></div>`; }).join(''); };
     renderCompare(); document.addEventListener('fx', renderCompare);
 
-    $('#bring-grid').innerHTML = BRING.map(b => `<div class="card"><div class="icon">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
+    $('#bring-grid').innerHTML = BRING.map(b => `<div class="row-item"><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
     $('#qty-rows').innerHTML = QTY_GUIDE.map(q => `<tr><td>${esc(q.stay)}</td><td>${esc(q.shots)}</td><td class="num">${esc(q.home)}</td></tr>`).join('');
-    $('#checklist').innerHTML = CHECKLIST.map((c, i) => `<div class="card"><div class="icon" style="font-size:14px;font-weight:800;color:var(--gold)">0${i + 1}</div><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
+    $('#checklist').innerHTML = CHECKLIST.map(c => `<div class="row-item"><h3>${esc(c.t)}</h3><p>${esc(c.d)}</p></div>`).join('');
 
     $('#steps-list').innerHTML = STEPS.map(s => `<div class="step"><div class="n">${s.n}</div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p></div>`).join('');
-    $('#team-grid').innerHTML = DOCTORS.map(d => `<div class="card ${d.photo ? 'doctor' : ''}">${d.photo ? `<img class="avatar-photo" src="${d.photo}" alt="${esc(d.name)}">` : `<div class="avatar">${d.icon || '🩺'}</div>`}<div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p>${d.quote ? `<p class="quote">“${esc(d.quote)}”</p>` : ''}</div></div>`).join('');
-    $('#review-grid').innerHTML = REVIEWS.map(r => `<div class="review"><div class="stars">${'★'.repeat(r.stars)}</div><p>“${esc(r.text)}”</p><b>${esc(r.name)}</b></div>`).join('');
+    $('#team-grid').innerHTML = DOCTORS.map(d => `<div class="card ${d.photo ? 'doctor' : ''}">${d.photo ? `<img class="avatar-photo" src="${d.photo}" alt="${esc(d.name)}">` : ''}<div><h3>${esc(d.name)}</h3><div class="role">${esc(d.role)}</div><p>${esc(d.bio)}</p>${d.quote ? `<p class="quote">“${esc(d.quote)}”</p>` : ''}</div></div>`).join('');
+    $('#review-grid').innerHTML = REVIEWS.map(r => `<div class="review"><p>“${esc(r.text)}”</p><b>${esc(r.name)}</b></div>`).join('');
 
     $('#info-list').innerHTML = [
       ['주소', `${esc(CLINIC.addressKo)}<br><span class="muted">${esc(CLINIC.address)}</span>`],
@@ -156,8 +172,8 @@
   }
 
   /* ---------- booking ---------- */
-  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', receive: 'clinic', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
-  const STEP_NAMES = ['진료 선택', '날짜 · 시간', '정보 · 사전 문진', '확인'];
+  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', receive: 'clinic', authMode: 'register', authEmail: '', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
+  const STEP_NAMES = ['진료 선택', '날짜 · 시간', '회원 확인', '정보 · 사전 문진', '확인'];
 
   const load = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; } };
   const save = list => localStorage.setItem(STORE_KEY, JSON.stringify(list));
@@ -199,7 +215,7 @@
     <p class="muted" style="margin:12px 0 0">최종 처방 용량·수량은 의사 진료 후 결정되며 금액이 달라질 수 있습니다.</p>`;
   }
 
-  function render() { stepper(); summary(); [step1, step2, step3, step4][state.step](); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function render() { stepper(); summary(); [step1, step2, stepAuth, step3, step4][state.step](); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
   /* step 1 */
   function step1() {
@@ -296,10 +312,71 @@
     return `<h3 style="margin:18px 0 0">${fmtDate(state.date)} 가능한 시간</h3><div class="slots">${s.map(x => `<button data-t="${x.time}" ${x.full ? 'disabled' : ''} class="${state.time === x.time ? 'selected' : ''}">${x.time}</button>`).join('')}</div><p class="muted" style="margin:10px 0 0">회색은 이미 예약된 시간입니다. 진료는 약 60분 소요됩니다.${takenCache[state.date] === 'error' ? ' <span style="color:var(--red)">예약 현황을 불러오지 못해 실제로는 마감된 시간이 있을 수 있습니다.</span>' : ''}</p>`;
   }
 
-  /* step 3 – info + screening */
+  /* step 3 – 회원 가입 / 로그인 */
+  function stepAuth() {
+    const el = $('#step'), acc = account();
+    if (acc) {
+      el.innerHTML = `<h2>3. 회원 확인</h2><p class="desc">아래 계정으로 예약합니다. 예약 내역은 이 계정에서 언제든 확인할 수 있습니다.</p>
+        <dl class="adm-dl" style="max-width:420px">
+          <div><dt>이름</dt><dd>${esc(acc.name)}</dd></div>
+          <div><dt>이메일</dt><dd>${esc(acc.email)}</dd></div>
+          <div><dt>전화번호</dt><dd>${esc(acc.phone)}</dd></div>
+        </dl>
+        <button class="btn btn-outline btn-sm" id="logout" style="margin-top:16px">다른 계정으로 로그인</button>
+        <div class="actions"><button class="btn btn-outline" id="back">이전</button><button class="btn btn-primary" id="next">정보 입력</button></div>`;
+      $('#logout').onclick = () => { setAuth('', null); stepAuth(); };
+      $('#back').onclick = () => { state.step = 1; render(); };
+      $('#next').onclick = () => {
+        const i = state.info;
+        if (!i.name) i.name = acc.name;
+        if (!i.phone) i.phone = acc.phone;
+        if (!i.contact) i.contact = acc.email;
+        state.step = 3; render();
+      };
+      return;
+    }
+    const mode = state.authMode || 'register';
+    el.innerHTML = `<h2>3. 회원 가입 · 로그인</h2><p class="desc">예약 내역 확인과 재방문을 위해 간단한 회원 가입이 필요합니다. 이메일 주소가 아이디가 됩니다.</p>
+      <div class="choice-grid" id="mode" style="margin-bottom:22px">
+        <button class="choice ${mode === 'register' ? 'selected' : ''}" data-m="register"><b>처음이에요</b><span>이름·이메일·전화번호로 가입</span></button>
+        <button class="choice ${mode === 'login' ? 'selected' : ''}" data-m="login"><b>이미 가입했어요</b><span>이메일과 비밀번호로 로그인</span></button>
+      </div>
+      <form id="af"><div class="form-grid">
+        ${mode === 'register' ? `<label class="f">이름 *<input id="a-name" value="${esc(state.info.name || '')}" placeholder="홍길동"></label>
+        <label class="f">전화번호 *<input id="a-phone" value="${esc(state.info.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></label>` : ''}
+        <label class="f ${mode === 'register' ? '' : 'full'}">이메일 *<input id="a-email" type="email" value="${esc(state.authEmail || '')}" placeholder="you@example.com" autocomplete="username"></label>
+        <label class="f ${mode === 'register' ? '' : 'full'}">비밀번호 *<input id="a-pw" type="password" placeholder="${mode === 'register' ? '8자 이상' : ''}" autocomplete="${mode === 'register' ? 'new-password' : 'current-password'}"></label>
+      </div>
+      <div id="a-err" class="err-msg"></div>
+      <div class="actions"><button class="btn btn-outline" type="button" id="back">이전</button>
+        <button class="btn btn-primary" type="submit" id="go">${mode === 'register' ? '가입하고 계속' : '로그인'}</button></div></form>
+      <p class="muted" style="margin-top:18px">입력하신 정보는 예약 확인과 진료 목적으로만 사용합니다.</p>`;
+    el.querySelectorAll('#mode .choice').forEach(b => b.onclick = () => { state.authMode = b.dataset.m; stepAuth(); });
+    $('#back').onclick = () => { state.step = 1; render(); };
+    $('#af').onsubmit = async e => {
+      e.preventDefault();
+      const err = $('#a-err'); err.textContent = ''; $('#go').disabled = true;
+      const email = $('#a-email').value.trim(), pw = $('#a-pw').value;
+      state.authEmail = email;
+      try {
+        if (!API) throw new Error('서버에 연결할 수 없습니다. 전화로 문의해 주세요.');
+        const body = mode === 'register'
+          ? { name: $('#a-name').value.trim(), phone: $('#a-phone').value.trim(), email, password: pw }
+          : { email, password: pw };
+        const j = await apiCall('/account/' + mode, { method: 'POST', body: JSON.stringify(body) });
+        setAuth(j.token, j.account);
+        state.info.name = state.info.name || j.account.name;
+        state.info.phone = state.info.phone || j.account.phone;
+        state.info.contact = j.account.email;
+        stepAuth();
+      } catch (e2) { err.textContent = e2.message; $('#go').disabled = false; }
+    };
+  }
+
+  /* step 4 – info + screening */
   function step3() {
     const i = state.info, el = $('#step');
-    el.innerHTML = `<h2>3. 예약자 정보 · 사전 문진</h2><p class="desc">여권과 동일한 영문 이름을 입력해 주세요. 사전 문진은 안전한 처방을 위한 것으로, 해당 항목이 있어도 의사 진료 후 결정됩니다.</p>
+    el.innerHTML = `<h2>4. 예약자 정보 · 사전 문진</h2><p class="desc">여권과 동일한 영문 이름을 입력해 주세요. 사전 문진은 안전한 처방을 위한 것으로, 해당 항목이 있어도 의사 진료 후 결정됩니다.</p>
       <div class="form-grid">
         <label class="f">이름 (한글) *<input id="name" value="${esc(i.name || '')}" placeholder="홍길동"></label>
         <label class="f">영문 이름 (여권) *<input id="ename" value="${esc(i.ename || '')}" placeholder="HONG GILDONG" style="text-transform:uppercase"></label>
@@ -325,11 +402,11 @@
     const screenMsg = () => {
       const on = SCREENING.filter(s => state.screen[s.id]);
       const block = on.filter(s => s.block), warn = on.filter(s => s.warn);
-      $('#screen-msg').innerHTML = block.length ? `<div class="notice red">⚠️ 체크하신 항목은 마운자로 처방이 <b>금기</b>에 해당합니다. 예약은 가능하지만 처방이 어려울 수 있으니 먼저 카카오톡으로 상담을 권장합니다.</div>` : warn.length ? `<div class="notice">ℹ️ 체크하신 항목은 진료 시 의사가 자세히 확인합니다. 관련 처방전·검사 결과가 있으면 사진으로 준비해 주세요.</div>` : '';
+      $('#screen-msg').innerHTML = block.length ? `<div class="notice red">체크하신 항목은 마운자로 처방이 <b>금기</b>에 해당합니다. 예약은 가능하지만 처방이 어려울 수 있으니 먼저 카카오톡으로 상담을 권장합니다.</div>` : warn.length ? `<div class="notice">체크하신 항목은 진료 시 의사가 자세히 확인합니다. 관련 처방전·검사 결과가 있으면 사진으로 준비해 주세요.</div>` : '';
     };
     el.querySelectorAll('input[data-s]').forEach(c => c.onchange = () => { state.screen[c.dataset.s] = c.checked; screenMsg(); }); screenMsg();
     $('#agree').onchange = e => state.agree = e.target.checked;
-    $('#back').onclick = () => { collect(); state.step = 1; render(); };
+    $('#back').onclick = () => { collect(); state.step = 2; render(); };
     $('#next').onclick = () => {
       collect();
       const req = ['name', 'ename', 'birth', 'phone', 'contact', 'height', 'weight'];
@@ -337,7 +414,7 @@
       req.forEach(id => { const f = $('#' + id); const bad = !f.value.trim(); f.classList.toggle('err', bad); if (bad) ok = false; });
       if (!ok) { el.querySelector('.err').focus(); return; }
       if (!state.agree) { alert('개인정보 수집·이용에 동의해 주세요.'); return; }
-      state.step = 3; render();
+      state.step = 4; render();
     };
     function collect() { ['name', 'ename', 'birth', 'sex', 'phone', 'contact', 'height', 'weight', 'meds', 'stay', 'fridge', 'prior'].forEach(id => state.info[id] = $('#' + id).value.trim()); state.info.ename = state.info.ename.toUpperCase(); }
   }
@@ -347,7 +424,7 @@
     const p = price(), i = state.info, el = $('#step');
     const h = +i.height / 100, bmi = h ? (+i.weight / (h * h)).toFixed(1) : '-';
     const screens = SCREENING.filter(s => state.screen[s.id]).map(s => s.label);
-    el.innerHTML = `<h2>4. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 스태프가 확인 후 입력하신 연락처로 확정 안내를 드립니다.</p>
+    el.innerHTML = `<h2>5. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 스태프가 확인 후 입력하신 연락처로 확정 안내를 드립니다.</p>
       <div class="confirm"><dl>
         <div><dt>일시</dt><dd>${fmtDate(state.date)} ${state.time}</dd></div>
         <div><dt>구분</dt><dd>${state.visit === 'first' ? '초진' : '재진'} · 마운자로 ${p.pen.dose}mg · ${esc(p.pk.label)}</dd></div>
@@ -366,7 +443,7 @@
       </dl></div>
       <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 전화로 꼭 취소해 주세요.</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
-    $('#back').onclick = () => { state.step = 2; render(); };
+    $('#back').onclick = () => { state.step = 3; render(); };
     $('#submit').onclick = async () => {
       const btn = $('#submit'); btn.disabled = true; btn.textContent = '접수 중…';
       const payload = { date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label,
@@ -374,9 +451,10 @@
       let rec = null, offline = false;
       if (API) {
         try {
-          const r = await fetch(`${API}/booking`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const r = await fetch(`${API}/booking`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken() ? { Authorization: 'Bearer ' + authToken() } : {}) }, body: JSON.stringify(payload) });
           const j = await r.json().catch(() => ({}));
           if (r.ok && j.code) rec = { ...payload, code: j.code, createdAt: j.createdAt, status: 'pending' };
+          else if (r.status === 401) { setAuth('', null); alert('로그인이 만료되었습니다. 다시 로그인해 주세요.'); state.step = 2; btn.disabled = false; btn.textContent = '예약 요청하기'; render(); return; }
           else if (r.status === 409) { alert(j.error || '이미 예약된 시간입니다. 다른 시간을 선택해 주세요.'); delete takenCache[state.date]; state.time = null; state.step = 1; btn.disabled = false; btn.textContent = '예약 요청하기'; render(); return; }
           else throw new Error(j.error || ('HTTP ' + r.status));
         } catch (e) { offline = true; }
@@ -395,48 +473,71 @@
     stepper(); $('#stepper').querySelectorAll('div').forEach(d => d.className = 'done');
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
       <p class="desc">아래 예약번호를 캡처해 두세요. 스태프가 접수 시간(10:00~19:00) 내에 ${esc(r.info.contact)}(으)로 확정 안내를 드립니다.</p>
-      ${offline ? `<div class="notice red" style="text-align:left">⚠️ 네트워크 문제로 예약이 클리닉에 전달되지 않았습니다. 아래 "예약 내용 복사"를 눌러 전화(${esc(CLINIC.phone)})로 알려주세요.</div>` : ''}
+      ${offline ? `<div class="notice red" style="text-align:left">네트워크 문제로 예약이 클리닉에 전달되지 않았습니다. 아래 "예약 내용 복사"를 눌러 전화(${esc(CLINIC.phone)})로 알려주세요.</div>` : ''}
       <div class="code">${r.code}</div>
       <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yk(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
-        ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">📞 ${esc(CLINIC.phone)}</a>`}
+        ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`}
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
       </div>
       <p class="muted" style="margin-top:14px">${CHAT ? CHAT.label.replace(' 상담', '') + ' 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.' : '급하시면 접수 시간 내 전화로 예약번호를 말씀해 주시면 바로 확인해 드립니다. 궁금한 점은 <a href="#chat" data-open-chat>AI 상담</a>에 물어보세요.'}</p></div>`;
-    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사됨 ✓'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
+    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사했습니다'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
   }
 
   const ST_LABEL = { pending: '확정 대기', confirmed: '확정됨', done: '방문 완료', cancelled: '취소됨', noshow: '노쇼' };
 
   function renderMy() {
     $('#stepper').style.display = 'none';
-    $('#summary').innerHTML = `<h3>예약 조회</h3><p style="font-size:14px;color:var(--ink-2);margin:0 0 12px">다른 기기에서 예약하셨다면 예약번호와 생년월일로 조회하세요.</p>
-      <label class="f">예약번호<input id="lk-code" placeholder="KR......" style="text-transform:uppercase"></label>
-      <label class="f" style="margin-top:8px">생년월일<input id="lk-birth" type="date"></label>
-      <button class="btn btn-primary btn-block" id="lk-go" style="margin-top:10px">조회</button>
-      <div id="lk-msg" class="muted" style="margin-top:8px"></div>
-      <a class="btn btn-outline btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
-    $('#lk-go').onclick = lookup;
+    const acc = account();
+    $('#summary').innerHTML = acc
+      ? `<h3>로그인 계정</h3><dl><div><dt>이름</dt><dd>${esc(acc.name)}</dd></div><div><dt>이메일</dt><dd>${esc(acc.email)}</dd></div><div><dt>전화</dt><dd>${esc(acc.phone)}</dd></div></dl>
+         <a class="btn btn-primary btn-block" href="book.html" style="margin-top:16px">새 예약</a>
+         <button class="btn btn-outline btn-block" id="logout" style="margin-top:8px">로그아웃</button>`
+      : `<h3>예약번호로 조회</h3><p style="font-size:13.5px;color:var(--ink-2);margin:0 0 12px">회원 가입 전에 예약하셨다면 예약번호와 생년월일로 조회하세요.</p>
+         <label class="f">예약번호<input id="lk-code" placeholder="KR......" style="text-transform:uppercase"></label>
+         <label class="f" style="margin-top:8px">생년월일<input id="lk-birth" type="date"></label>
+         <button class="btn btn-outline btn-block" id="lk-go" style="margin-top:10px">조회</button>
+         <div id="lk-msg" class="muted" style="margin-top:8px"></div>`;
+    if (acc) $('#logout').onclick = () => { setAuth('', null); location.reload(); };
+    else $('#lk-go').onclick = lookup;
 
-    const list = load();
-    $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">예약 상태를 확인하고 취소할 수 있습니다. 확정 안내는 입력하신 연락처로 보내드립니다.</p>` +
-      (list.length ? `<div class="my-list">${list.map(r => `<div class="my-item" data-code="${esc(r.code)}"><div><b>${fmtDate(r.date)} ${r.time}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${esc(r.info.name)}<br><span class="muted">예약번호 ${esc(r.code)}</span></div><div style="text-align:right"><span class="st ${r.status === 'cancelled' ? 'cancel' : ''}">${esc(ST_LABEL[r.status] || r.status)}</span><br>${r.status !== 'cancelled' ? `<button class="btn btn-outline btn-sm" data-c="${esc(r.code)}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>
-         <p class="muted" style="margin-top:12px">이 목록은 이 브라우저에 저장된 내역입니다. 최신 상태는 위 조회로 확인하세요.</p>`
-        : '<p class="muted">이 브라우저에 저장된 예약이 없습니다. 오른쪽에서 예약번호로 조회하세요.</p>');
-
-    $('#step').querySelectorAll('button[data-c]').forEach(b => b.onclick = async () => {
-      const rec = load().find(r => r.code === b.dataset.c);
-      if (!confirm('예약을 취소할까요?')) return;
-      b.disabled = true;
-      if (API && rec?.info?.birth) {
+    if (!acc) {
+      $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">로그인하면 예약 내역이 기기와 상관없이 보입니다.</p>
+        <form id="lf" style="max-width:420px"><div class="form-grid">
+          <label class="f full">이메일<input id="l-email" type="email" autocomplete="username" placeholder="you@example.com"></label>
+          <label class="f full">비밀번호<input id="l-pw" type="password" autocomplete="current-password"></label>
+        </div><div id="l-err" class="err-msg"></div>
+        <button class="btn btn-primary" type="submit" id="l-go" style="margin-top:14px">로그인</button>
+        <a class="btn btn-outline" href="book.html" style="margin-top:14px;margin-left:8px">예약하면서 가입하기</a></form>`;
+      $('#lf').onsubmit = async e => {
+        e.preventDefault(); $('#l-go').disabled = true; $('#l-err').textContent = '';
         try {
-          const r = await fetch(`${API}/booking/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: b.dataset.c, birth: rec.info.birth }) });
-          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || '취소 실패');
-        } catch (e) { alert('취소를 처리하지 못했습니다. 전화(' + CLINIC.phone + ')로 알려주세요.\n' + e.message); b.disabled = false; return; }
-      }
-      save(load().map(r => r.code === b.dataset.c ? { ...r, status: 'cancelled' } : r));
-      renderMy();
-    });
+          const j = await apiCall('/account/login', { method: 'POST', body: JSON.stringify({ email: $('#l-email').value.trim(), password: $('#l-pw').value }) });
+          setAuth(j.token, j.account); location.reload();
+        } catch (e2) { $('#l-err').textContent = e2.message; $('#l-go').disabled = false; }
+      };
+      return;
+    }
+
+    $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">${esc(acc.name)}님의 예약 내역입니다.</p><div id="my-rows">불러오는 중…</div>`;
+    loadMyBookings();
+  }
+
+  async function loadMyBookings() {
+    try {
+      const j = await apiCall('/account/bookings');
+      const rows = j.bookings || [];
+      $('#my-rows').innerHTML = rows.length
+        ? `<div class="my-list">${rows.map(r => `<div class="my-item"><div><b>${fmtDate(r.date)} ${esc(r.time)}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${yen(r.total)}<br><span class="muted">예약번호 ${esc(r.code)}</span>${r.adminNote ? `<br><span class="muted">안내: ${esc(r.adminNote)}</span>` : ''}</div>
+            <div style="text-align:right"><span class="st st-${esc(r.status)}">${esc(ST_LABEL[r.status] || r.status)}</span><br>${r.status === 'pending' || r.status === 'confirmed' ? `<button class="btn btn-outline btn-sm" data-c="${esc(r.code)}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>`
+        : '<p class="muted">아직 예약이 없습니다. <a href="book.html" style="border-bottom:1px solid var(--line)">예약하기</a></p>';
+      $('#my-rows').querySelectorAll('button[data-c]').forEach(b => b.onclick = async () => {
+        if (!confirm('예약을 취소할까요?')) return;
+        b.disabled = true;
+        try { await apiCall('/booking/cancel', { method: 'POST', body: JSON.stringify({ code: b.dataset.c }) }); loadMyBookings(); }
+        catch (e) { alert('취소하지 못했습니다. ' + e.message); b.disabled = false; }
+      });
+    } catch (e) { $('#my-rows').innerHTML = `<div class="notice red">불러오지 못했습니다. ${esc(e.message)}</div>`; }
   }
 
   async function lookup() {

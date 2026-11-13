@@ -2,10 +2,11 @@
  * 1) /chat          : OpenAI 챗봇 프록시 (API 키는 Worker 시크릿에만 보관)
  * 2) /booking       : 예약 접수 → KV 저장
  * 3) /slots         : 날짜별 마감 시간 조회
- * 4) /admin/*       : 관리자 로그인·예약 목록·상태 변경
+ * 4) /account/*     : 회원 가입·로그인·내 예약
+ * 5) /admin/*       : 관리자 로그인·예약 목록·상태 변경
  *
  * 바인딩: DB (D1), SLOTS (Durable Object)
- * 시크릿: OPENAI_API_KEY, ADMIN_PASSWORD
+ * 시크릿: OPENAI_API_KEY, ADMIN_PASSWORD, SESSION_SECRET
  * 변수  : OPENAI_MODEL, ALLOWED_ORIGINS
  */
 
@@ -78,6 +79,40 @@ async function verifyToken(token, secret) {
   return timingSafeEqual(sig, await hmac(secret, exp));
 }
 
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = s64 => Uint8Array.from(atob(s64), c => c.charCodeAt(0));
+
+async function pbkdf2(password, saltBytes) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' }, base, 256);
+  return b64(bits);
+}
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return { hash: await pbkdf2(password, salt), salt: b64(salt) };
+}
+async function checkPassword(password, hash, salt) {
+  return timingSafeEqual(await pbkdf2(password, unb64(salt)), hash);
+}
+
+const SESSION_TTL_SEC = 60 * 60 * 24 * 30;      // 회원 세션 30일
+async function makeSession(secret, email) {
+  const exp = String(Math.floor(Date.now() / 1000) + SESSION_TTL_SEC);
+  const payload = `${btoa(email).replace(/=+$/, '')}.${exp}`;
+  return `${payload}.${await hmac(secret, payload)}`;
+}
+async function readSession(token, secret) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [e64, exp, sig] = parts;
+  if (!/^\d+$/.test(exp) || Number(exp) < Math.floor(Date.now() / 1000)) return null;
+  if (!timingSafeEqual(sig, await hmac(secret, `${e64}.${exp}`))) return null;
+  try { return atob(e64.padEnd(Math.ceil(e64.length / 4) * 4, '=')); } catch { return null; }
+}
+
+const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && v.length <= 160;
+
 const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isTime = s => /^\d{2}:\d{2}$/.test(s);
@@ -86,7 +121,7 @@ const hhmm = t => String(t).replace(':', '');
 const toRow = b => ([b.code, b.createdAt, b.updatedAt, b.status, b.date, b.time, b.visit, b.dose, b.pack, b.receive,
   JSON.stringify(b.extras || []), b.mix, b.total, b.info.name, b.info.ename, b.info.birth, b.info.sex, b.info.phone,
   b.info.contact, b.info.height, b.info.weight, b.info.meds, b.info.stay, b.info.fridge, b.info.prior,
-  JSON.stringify(b.screening || []), b.adminNote || '']);
+  JSON.stringify(b.screening || []), b.adminNote || '', b.accountEmail || null]);
 
 const fromRow = r => r && ({
   code: r.code, createdAt: r.created_at, updatedAt: r.updated_at, status: r.status,
@@ -94,14 +129,14 @@ const fromRow = r => r && ({
   extras: JSON.parse(r.extras || '[]'), mix: r.mix, total: r.total,
   info: { name: r.name, ename: r.ename, birth: r.birth, sex: r.sex, phone: r.phone, contact: r.contact,
     height: r.height, weight: r.weight, meds: r.meds, stay: r.stay, fridge: r.fridge, prior: r.prior },
-  screening: JSON.parse(r.screening || '[]'), adminNote: r.admin_note || '',
+  screening: JSON.parse(r.screening || '[]'), adminNote: r.admin_note || '', accountEmail: r.account_email || null,
 });
 
-const INSERT_SQL = `INSERT INTO bookings (code,created_at,updated_at,status,visit_date,visit_time,visit_type,dose,pack,receive,extras,mix,total,name,ename,birth,sex,phone,contact,height,weight,meds,stay,fridge,prior,screening,admin_note)
-  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)`;
+const INSERT_SQL = `INSERT INTO bookings (code,created_at,updated_at,status,visit_date,visit_time,visit_type,dose,pack,receive,extras,mix,total,name,ename,birth,sex,phone,contact,height,weight,meds,stay,fridge,prior,screening,admin_note,account_email)
+  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28)`;
 
 /* ---------- handlers ---------- */
-async function createBooking(body, env) {
+async function createBooking(body, env, accountEmail) {
   const i = body.info || {};
   const b = {
     code: 'KR' + Date.now().toString(36).toUpperCase().slice(-6) + Math.floor(Math.random() * 90 + 10),
@@ -124,6 +159,7 @@ async function createBooking(body, env) {
     screening: Array.isArray(body.screening) ? body.screening.slice(0, 20).map(x => str(x, 200)) : [],
     adminNote: '',
     updatedAt: null,
+    accountEmail: accountEmail || null,
   };
   if (!isDate(b.date) || !isTime(b.time)) return { error: '날짜·시간이 올바르지 않습니다.', status: 400 };
   if (!b.info.name || !b.info.phone || !b.info.contact) return { error: '필수 정보가 비어 있습니다.', status: 400 };
@@ -150,7 +186,7 @@ async function listBookings(env, { from, to, status }) {
   if (from) { where.push('visit_date >= ?'); bind.push(from); }
   if (to) { where.push('visit_date <= ?'); bind.push(to); }
   if (status) { where.push('status = ?'); bind.push(status); }
-  const sql = `SELECT code, visit_date AS date, visit_time AS time, status, name, dose, total
+  const sql = `SELECT code, visit_date AS date, visit_time AS time, status, name, dose, total, account_email AS account
     FROM bookings ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY visit_date, visit_time LIMIT 2000`;
   const r = await env.DB.prepare(sql).bind(...bind).all();
@@ -209,9 +245,65 @@ export default {
 
     if (!env.DB) return json({ error: 'D1 database not bound' }, 500);
 
-    /* ----- 예약 접수 ----- */
+    /* ----- 회원 ----- */
+    const sessionEmail = async () => {
+      if (!env.SESSION_SECRET) return null;
+      return readSession((request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''), env.SESSION_SECRET);
+    };
+
+    if (path === '/account/register' && request.method === 'POST') {
+      if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET not configured' }, 500);
+      const email = str(body.email, 160).toLowerCase();
+      const name = str(body.name, 60), phone = str(body.phone, 40);
+      const pw = typeof body.password === 'string' ? body.password : '';
+      if (!name) return json({ error: '이름을 입력해 주세요.' }, 400);
+      if (!isEmail(email)) return json({ error: '이메일 주소를 다시 확인해 주세요.' }, 400);
+      if (!phone) return json({ error: '전화번호를 입력해 주세요.' }, 400);
+      if (pw.length < 8) return json({ error: '비밀번호는 8자 이상으로 정해주세요.' }, 400);
+      if (pw.length > 200) return json({ error: '비밀번호가 너무 깁니다.' }, 400);
+      const exists = await env.DB.prepare('SELECT email FROM accounts WHERE email = ?').bind(email).first();
+      if (exists) return json({ error: '이미 가입된 이메일입니다. 로그인해 주세요.' }, 409);
+      const { hash, salt } = await hashPassword(pw);
+      const now = new Date().toISOString();
+      await env.DB.prepare('INSERT INTO accounts (email,name,phone,pw_hash,pw_salt,created_at,last_login) VALUES (?,?,?,?,?,?,?)')
+        .bind(email, name, phone, hash, salt, now, now).run();
+      return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email, name, phone } });
+    }
+
+    if (path === '/account/login' && request.method === 'POST') {
+      if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET not configured' }, 500);
+      const email = str(body.email, 160).toLowerCase();
+      const pw = typeof body.password === 'string' ? body.password : '';
+      await new Promise(r => setTimeout(r, 300));
+      const row = await env.DB.prepare('SELECT * FROM accounts WHERE email = ?').bind(email).first();
+      if (!row || !(await checkPassword(pw, row.pw_hash, row.pw_salt))) {
+        return json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
+      }
+      await env.DB.prepare('UPDATE accounts SET last_login = ? WHERE email = ?').bind(new Date().toISOString(), email).run();
+      return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email: row.email, name: row.name, phone: row.phone } });
+    }
+
+    if (path === '/account/me' && request.method === 'GET') {
+      const email = await sessionEmail();
+      if (!email) return json({ error: 'unauthorized' }, 401);
+      const row = await env.DB.prepare('SELECT email, name, phone, created_at FROM accounts WHERE email = ?').bind(email).first();
+      if (!row) return json({ error: 'unauthorized' }, 401);
+      return json({ ok: true, account: { email: row.email, name: row.name, phone: row.phone, createdAt: row.created_at } });
+    }
+
+    if (path === '/account/bookings' && request.method === 'GET') {
+      const email = await sessionEmail();
+      if (!email) return json({ error: 'unauthorized' }, 401);
+      const r = await env.DB.prepare(`SELECT code, visit_date AS date, visit_time AS time, status, dose, pack, total, admin_note AS adminNote
+        FROM bookings WHERE account_email = ? ORDER BY visit_date DESC, visit_time DESC LIMIT 100`).bind(email).all();
+      return json({ ok: true, bookings: r.results || [] });
+    }
+
+    /* ----- 예약 접수 (회원 전용) ----- */
     if (path === '/booking' && request.method === 'POST') {
-      const r = await createBooking(body, env);
+      const email = await sessionEmail();
+      if (!email) return json({ error: '예약하려면 로그인해 주세요.' }, 401);
+      const r = await createBooking(body, env, email);
       return r.error ? json({ error: r.error }, r.status) : json(r);
     }
 
@@ -228,7 +320,9 @@ export default {
     if (path === '/booking/cancel' && request.method === 'POST') {
       const code = str(body.code, 20).toUpperCase(), birth = str(body.birth, 10);
       const rec = await getBooking(env, code);
-      if (!rec || rec.info.birth !== birth) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
+      const me = await sessionEmail();
+      const mine = rec && me && rec.accountEmail === me;
+      if (!rec || (!mine && rec.info.birth !== birth)) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
       await setStatus(env, code, 'cancelled');
       if (env.SLOTS) await slotStub(env, rec.date).fetch('https://do/release', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: rec.time }) }).catch(() => {});
       return json({ ok: true });

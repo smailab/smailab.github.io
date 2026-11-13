@@ -23,3 +23,17 @@ CREATE TABLE IF NOT EXISTS bookings (
 CREATE INDEX IF NOT EXISTS idx_bookings_date   ON bookings(visit_date);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_slot   ON bookings(visit_date, visit_time);
+
+-- 회원 계정 (이메일 + 비밀번호)
+CREATE TABLE IF NOT EXISTS accounts (
+  email       TEXT PRIMARY KEY,          -- 소문자 정규화
+  name        TEXT NOT NULL,
+  phone       TEXT NOT NULL,
+  pw_hash     TEXT NOT NULL,             -- PBKDF2-SHA256, base64
+  pw_salt     TEXT NOT NULL,             -- base64
+  created_at  TEXT NOT NULL,
+  last_login  TEXT
+);
+-- 예약에 회원 연결
+ALTER TABLE bookings ADD COLUMN account_email TEXT;
+CREATE INDEX IF NOT EXISTS idx_bookings_account ON bookings(account_email);
