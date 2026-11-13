@@ -19,6 +19,7 @@
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STORE_KEY = 'krich_bookings';
+  const API = (typeof CHATBOT !== 'undefined' && CHATBOT.endpoint ? CHATBOT.endpoint.replace(/\/$/, '') : '');
   /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
   const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' } : null;
   const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>💬 AI 상담</a>`;
@@ -234,20 +235,30 @@
   const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   function fmtDate(k) { const [y, m, d] = k.split('-').map(Number); const dt = new Date(y, m - 1, d); return `${y}.${pad(m)}.${pad(d)} (${'일월화수목금토'[dt.getDay()]})`; }
   function isClosed(d) { return CLINIC.closedWeekdays.includes(d.getDay()) || (CLINIC.closedDates || []).includes(key(d)); }
+  let takenCache = {};                 // { 'YYYY-MM-DD': Set(times) | 'loading' | 'error' }
+  async function loadTaken(k) {
+    if (!API) { takenCache[k] = new Set(); return; }
+    takenCache[k] = 'loading';
+    try {
+      const r = await fetch(`${API}/slots?date=${encodeURIComponent(k)}`, { cache: 'no-store' });
+      const j = await r.json();
+      takenCache[k] = new Set(Array.isArray(j.taken) ? j.taken : []);
+    } catch { takenCache[k] = 'error'; }
+  }
   function slotsFor(k) {
     const [y, m, d] = k.split('-').map(Number); const dt = new Date(y, m - 1, d);
     const weekend = dt.getDay() === 0 || dt.getDay() === 6;
     const close = weekend ? CLINIC.closeHourWeekend : CLINIC.closeHourWeekday;
     const endMin = close * 60 - CLINIC.lastEntryMinutes, out = [];
+    const taken = takenCache[k] instanceof Set ? takenCache[k] : new Set();
     for (let t = CLINIC.openHour * 60; t <= endMin; t += CLINIC.slotMinutes) {
-      const s = `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
-      if (CLINIC.lunch.includes(s)) continue;
-      let h = 0; for (const c of (k + s)) h = (h * 31 + c.charCodeAt(0)) >>> 0;  // 데모용 잔여 슬롯
-      const booked = load().some(b => b.date === k && b.time === s && b.status !== 'cancel');
-      out.push({ time: s, full: booked || h % 5 === 0 });
+      const sTime = `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
+      if (CLINIC.lunch.includes(sTime)) continue;
+      out.push({ time: sTime, full: taken.has(sTime) });
     }
     return out;
   }
+
   function step2() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const maxD = new Date(today); maxD.setDate(maxD.getDate() + CLINIC.maxDaysAhead);
@@ -267,9 +278,13 @@
     el.innerHTML = `<h2>2. 내원 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 접수 10:00~19:00, 휴진은 비정기이므로 확정 안내 시 함께 알려드립니다. 당일 예약은 전화(${esc(CLINIC.phone)})로 문의해 주세요.${state.receive === 'hotel' ? '' : ''}</p>
       <div class="cal-nav"><button id="prev" ${prevOk ? '' : 'disabled'}>‹</button><b>${y}년 ${m + 1}월</b><button id="next-m" ${nextOk ? '' : 'disabled'}>›</button></div>
       <div class="cal">${cells}</div>
-      <div id="slots-wrap">${state.date ? slotsHtml() : '<p class="muted" style="margin-top:16px">날짜를 선택하면 가능한 시간이 표시됩니다.</p>'}</div>
+      <div id="slots-wrap">${state.date ? (takenCache[state.date] === 'loading' ? '<p class="muted" style="margin-top:16px">가능한 시간을 불러오는 중…</p>' : slotsHtml()) : '<p class="muted" style="margin-top:16px">날짜를 선택하면 가능한 시간이 표시됩니다.</p>'}</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 이전</button><button class="btn btn-primary" id="next" ${state.date && state.time ? '' : 'disabled'}>정보 입력 →</button></div>`;
-    el.querySelectorAll('.cal button[data-k]').forEach(b => b.onclick = () => { state.date = b.dataset.k; state.time = null; step2(); summary(); });
+    el.querySelectorAll('.cal button[data-k]').forEach(b => b.onclick = async () => {
+      state.date = b.dataset.k; state.time = null;
+      if (!(takenCache[state.date] instanceof Set)) { step2(); await loadTaken(state.date); }
+      step2(); summary();
+    });
     $('#prev').onclick = () => { calMonth = new Date(y, m - 1, 1); step2(); };
     $('#next-m').onclick = () => { calMonth = new Date(y, m + 1, 1); step2(); };
     el.querySelectorAll('.slots button').forEach(b => b.onclick = () => { if (b.disabled) return; state.time = b.dataset.t; step2(); summary(); });
@@ -278,7 +293,7 @@
   }
   function slotsHtml() {
     const s = slotsFor(state.date);
-    return `<h3 style="margin:18px 0 0">${fmtDate(state.date)} 가능한 시간</h3><div class="slots">${s.map(x => `<button data-t="${x.time}" ${x.full ? 'disabled' : ''} class="${state.time === x.time ? 'selected' : ''}">${x.time}</button>`).join('')}</div><p class="muted" style="margin:10px 0 0">회색은 마감된 시간입니다. 진료는 약 60분 소요됩니다.</p>`;
+    return `<h3 style="margin:18px 0 0">${fmtDate(state.date)} 가능한 시간</h3><div class="slots">${s.map(x => `<button data-t="${x.time}" ${x.full ? 'disabled' : ''} class="${state.time === x.time ? 'selected' : ''}">${x.time}</button>`).join('')}</div><p class="muted" style="margin:10px 0 0">회색은 이미 예약된 시간입니다. 진료는 약 60분 소요됩니다.${takenCache[state.date] === 'error' ? ' <span style="color:var(--red)">예약 현황을 불러오지 못해 실제로는 마감된 시간이 있을 수 있습니다.</span>' : ''}</p>`;
   }
 
   /* step 3 – info + screening */
@@ -352,11 +367,23 @@
       <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 전화로 꼭 취소해 주세요.</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
     $('#back').onclick = () => { state.step = 2; render(); };
-    $('#submit').onclick = () => {
-      const code = 'KR' + Date.now().toString(36).toUpperCase().slice(-6);
-      const rec = { code, createdAt: new Date().toISOString(), status: 'pending', date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label, receive: p.rcv.title, extras: state.extras, mix: state.mix, total: p.total, info: { ...i }, screen: screens };
+    $('#submit').onclick = async () => {
+      const btn = $('#submit'); btn.disabled = true; btn.textContent = '접수 중…';
+      const payload = { date: state.date, time: state.time, visit: state.visit, dose: state.dose, pack: p.pk.label,
+        receive: p.rcv.title, extras: state.extras, mix: state.mix, total: p.total, info: { ...i }, screening: screens };
+      let rec = null, offline = false;
+      if (API) {
+        try {
+          const r = await fetch(`${API}/booking`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.code) rec = { ...payload, code: j.code, createdAt: j.createdAt, status: 'pending' };
+          else if (r.status === 409) { alert(j.error || '이미 예약된 시간입니다. 다른 시간을 선택해 주세요.'); delete takenCache[state.date]; state.time = null; state.step = 1; btn.disabled = false; btn.textContent = '예약 요청하기'; render(); return; }
+          else throw new Error(j.error || ('HTTP ' + r.status));
+        } catch (e) { offline = true; }
+      } else offline = true;
+      if (!rec) rec = { ...payload, code: 'KR' + Date.now().toString(36).toUpperCase().slice(-6), createdAt: new Date().toISOString(), status: 'pending' };
       save([rec, ...load()]);
-      done(rec);
+      done(rec, offline);
     };
   }
 
@@ -364,10 +391,11 @@
     return `[K-RICH CLINIC 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)} (${krw(r.total)})`;
   }
 
-  function done(r) {
+  function done(r, offline) {
     stepper(); $('#stepper').querySelectorAll('div').forEach(d => d.className = 'done');
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
       <p class="desc">아래 예약번호를 캡처해 두세요. 스태프가 접수 시간(10:00~19:00) 내에 ${esc(r.info.contact)}(으)로 확정 안내를 드립니다.</p>
+      ${offline ? `<div class="notice red" style="text-align:left">⚠️ 네트워크 문제로 예약이 클리닉에 전달되지 않았습니다. 아래 "예약 내용 복사"를 눌러 전화(${esc(CLINIC.phone)})로 알려주세요.</div>` : ''}
       <div class="code">${r.code}</div>
       <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yk(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
@@ -378,13 +406,55 @@
     $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사됨 ✓'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
   }
 
+  const ST_LABEL = { pending: '확정 대기', confirmed: '확정됨', done: '방문 완료', cancelled: '취소됨', noshow: '노쇼' };
+
   function renderMy() {
     $('#stepper').style.display = 'none';
-    $('#summary').innerHTML = `<h3>안내</h3><p style="font-size:14px;color:var(--ink-2);margin:0">예약 내역은 이 브라우저에만 저장됩니다. 다른 기기에서 확인하시려면 예약번호로 전화 문의해 주세요.</p><a class="btn btn-primary btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
+    $('#summary').innerHTML = `<h3>예약 조회</h3><p style="font-size:14px;color:var(--ink-2);margin:0 0 12px">다른 기기에서 예약하셨다면 예약번호와 생년월일로 조회하세요.</p>
+      <label class="f">예약번호<input id="lk-code" placeholder="KR......" style="text-transform:uppercase"></label>
+      <label class="f" style="margin-top:8px">생년월일<input id="lk-birth" type="date"></label>
+      <button class="btn btn-primary btn-block" id="lk-go" style="margin-top:10px">조회</button>
+      <div id="lk-msg" class="muted" style="margin-top:8px"></div>
+      <a class="btn btn-outline btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
+    $('#lk-go').onclick = lookup;
+
     const list = load();
-    $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">예약 요청·확정 내역을 확인하고 취소할 수 있습니다.</p>` +
-      (list.length ? `<div class="my-list">${list.map(r => `<div class="my-item"><div><b>${fmtDate(r.date)} ${r.time}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${esc(r.info.name)}<br><span class="muted">예약번호 ${r.code}</span></div><div style="text-align:right"><span class="st ${r.status === 'cancel' ? 'cancel' : ''}">${r.status === 'cancel' ? '취소됨' : '확정 대기'}</span><br>${r.status !== 'cancel' ? `<button class="btn btn-outline btn-sm" data-c="${r.code}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted">저장된 예약이 없습니다.</p>');
-    $('#step').querySelectorAll('button[data-c]').forEach(b => b.onclick = () => { if (!confirm('예약을 취소할까요?')) return; save(load().map(r => r.code === b.dataset.c ? { ...r, status: 'cancel' } : r)); renderMy(); });
+    $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">예약 상태를 확인하고 취소할 수 있습니다. 확정 안내는 입력하신 연락처로 보내드립니다.</p>` +
+      (list.length ? `<div class="my-list">${list.map(r => `<div class="my-item" data-code="${esc(r.code)}"><div><b>${fmtDate(r.date)} ${r.time}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${esc(r.info.name)}<br><span class="muted">예약번호 ${esc(r.code)}</span></div><div style="text-align:right"><span class="st ${r.status === 'cancelled' ? 'cancel' : ''}">${esc(ST_LABEL[r.status] || r.status)}</span><br>${r.status !== 'cancelled' ? `<button class="btn btn-outline btn-sm" data-c="${esc(r.code)}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>
+         <p class="muted" style="margin-top:12px">이 목록은 이 브라우저에 저장된 내역입니다. 최신 상태는 위 조회로 확인하세요.</p>`
+        : '<p class="muted">이 브라우저에 저장된 예약이 없습니다. 오른쪽에서 예약번호로 조회하세요.</p>');
+
+    $('#step').querySelectorAll('button[data-c]').forEach(b => b.onclick = async () => {
+      const rec = load().find(r => r.code === b.dataset.c);
+      if (!confirm('예약을 취소할까요?')) return;
+      b.disabled = true;
+      if (API && rec?.info?.birth) {
+        try {
+          const r = await fetch(`${API}/booking/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: b.dataset.c, birth: rec.info.birth }) });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || '취소 실패');
+        } catch (e) { alert('취소를 처리하지 못했습니다. 전화(' + CLINIC.phone + ')로 알려주세요.\n' + e.message); b.disabled = false; return; }
+      }
+      save(load().map(r => r.code === b.dataset.c ? { ...r, status: 'cancelled' } : r));
+      renderMy();
+    });
+  }
+
+  async function lookup() {
+    const code = $('#lk-code').value.trim().toUpperCase(), birth = $('#lk-birth').value;
+    const msg = $('#lk-msg');
+    if (!code || !birth) { msg.textContent = '예약번호와 생년월일을 모두 입력해 주세요.'; return; }
+    if (!API) { msg.textContent = '서버에 연결할 수 없습니다. 전화로 문의해 주세요.'; return; }
+    msg.textContent = '조회 중…';
+    try {
+      const r = await fetch(`${API}/booking/lookup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, birth }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || '조회 실패');
+      const b = j.booking;
+      msg.innerHTML = `<div class="notice green" style="text-align:left">
+        <b>${esc(b.code)}</b> · ${esc(ST_LABEL[b.status] || b.status)}<br>
+        ${fmtDate(b.date)} ${esc(b.time)} · 마운자로 ${b.dose}mg · ${esc(b.pack)}<br>
+        예상 금액 ${yen(b.total)}${b.adminNote ? `<br><span class="muted">안내: ${esc(b.adminNote)}</span>` : ''}</div>`;
+    } catch (e) { msg.textContent = e.message; }
   }
 
   /* ---------- init ---------- */

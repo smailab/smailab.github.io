@@ -419,3 +419,33 @@ label.f input.err, label.f select.err { border-color: var(--red); }
 .chat-foot { font-size: 11px; color: var(--ink-3); padding: 0 14px 10px; background: #fff; }
 .btn-ai { background: var(--gold); color: #fff; }
 .btn-ai:hover { background: #7f6950; }
+
+/* ===== admin ===== */
+.adm-head { background: var(--green); color: #fff; padding: 14px 0; }
+.adm-head .container { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.adm-head b { font-size: 16px; }
+.adm-head .btn-outline { border-color: rgba(255,255,255,.5); color: #fff; }
+.adm-head .btn-outline:hover { background: #fff; color: var(--green); }
+.adm-login { max-width: 360px; margin: 40px auto; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+.adm-login h1 { font-size: 24px; margin-bottom: 6px; }
+.adm-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.adm-bar label.f { font-size: 12px; }
+.adm-bar input, .adm-bar select { padding: 9px 12px; font-size: 14px; }
+.adm-sum { margin: 14px 0; font-size: 14px; color: var(--ink-2); }
+.adm-table { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; }
+.adm-table table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px; }
+.adm-table th, .adm-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.adm-table th { background: var(--bg-2); font-size: 12.5px; color: var(--ink-2); font-weight: 700; }
+.adm-table tr:last-child td { border-bottom: 0; }
+.adm-table td.num { text-align: right; font-weight: 700; white-space: nowrap; }
+.st { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); white-space: nowrap; }
+.st-pending { background: var(--gold-soft); color: #8a6a1e; }
+.st-confirmed { background: var(--green-soft); color: var(--green); }
+.st-done { background: #e6eef5; color: #2d5b86; }
+.st-cancelled { background: var(--bg-2); color: var(--ink-3); }
+.st-noshow { background: var(--red-soft); color: var(--red); }
+.adm-dl { display: grid; gap: 8px; font-size: 14.5px; margin: 14px 0 0; }
+.adm-dl div { display: grid; grid-template-columns: 96px 1fr; gap: 10px; border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
+.adm-dl dt { color: var(--ink-3); font-size: 13px; }
+.adm-dl dd { margin: 0; }
+.adm-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
