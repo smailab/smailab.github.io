@@ -44,7 +44,7 @@ const CHATBOT = {
   endpoint: 'https://krich-chat.hyunsh99.workers.dev',   // Cloudflare Worker 프록시 (worker/ 참고)
   model: 'gpt-4o-mini',            // 프록시의 OPENAI_MODEL 환경변수가 우선
   title: 'K-RICH AI 상담',
-  greeting: '안녕하세요! K-RICH CLINIC 마운자로 AI 상담입니다 🙂\n가격, 한국 반입 규정, 보관·부작용, 예약 방법 등 궁금한 점을 물어보세요.',
+  greeting: '안녕하세요! K-RICH CLINIC 마운자로 AI 상담입니다 🙂\n가격, 한국 반입 규정, 보관·부작용, 예약 방법 등 궁금한 점을 물어보세요.\n\n※ 마운자로 처방과 이 페이지에 안내된 내용만 답변해 드립니다. 그 외 문의는 전화로 연락해 주세요.',
   quick: ['2.5mg 가격이 얼마예요?', '한국에 몇 개까지 가져갈 수 있어요?', '부작용이 걱정돼요', '예약은 어떻게 하나요?'],
   maxTurns: 12,
 };
