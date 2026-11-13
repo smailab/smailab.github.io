@@ -6,7 +6,8 @@
  * 5) /admin/*       : 관리자 로그인·예약 목록·상태 변경
  *
  * 바인딩: DB (D1), SLOTS (Durable Object)
- * 시크릿: OPENAI_API_KEY, ADMIN_PASSWORD, SESSION_SECRET
+ * 시크릿: OPENAI_API_KEY, ADMIN_PASSWORD, SESSION_SECRET, RESEND_API_KEY(선택)
+ * 변수  : MAIL_FROM – 인증 메일 발신 주소. RESEND_API_KEY가 없으면 이메일 인증을 건너뜁니다.
  * 변수  : OPENAI_MODEL, ALLOWED_ORIGINS
  */
 
@@ -109,6 +110,55 @@ async function readSession(token, secret) {
   if (!/^\d+$/.test(exp) || Number(exp) < Math.floor(Date.now() / 1000)) return null;
   if (!timingSafeEqual(sig, await hmac(secret, `${e64}.${exp}`))) return null;
   try { return atob(e64.padEnd(Math.ceil(e64.length / 4) * 4, '=')); } catch { return null; }
+}
+
+const CODE_TTL_MIN = 10, CODE_MAX_TRIES = 5, CODE_RESEND_SEC = 60;
+
+const newCode = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+async function codeHash(code, email, secret) {
+  const d = await crypto.subtle.digest('SHA-256', enc.encode(`${code}:${email}:${secret}`));
+  return b64(d);
+}
+
+function verifyEmailHtml(code, name) {
+  return `<!doctype html><html lang="ko"><body style="margin:0;background:#FFFBF8;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#1A0F04">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFBF8;padding:40px 16px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#fff;border:1px solid #E3D9CF">
+<tr><td style="background:#1A0F04;padding:22px 28px;color:#fff;font-size:15px;letter-spacing:.04em">K-RICH CLINIC</td></tr>
+<tr><td style="padding:32px 28px">
+<p style="margin:0 0 6px;font-size:18px;font-weight:600">이메일 인증</p>
+<p style="margin:0 0 26px;font-size:14px;line-height:1.7;color:#5A4A3A">${name ? name + '님, ' : ''}아래 인증 번호를 예약 화면에 입력해 주세요. ${CODE_TTL_MIN}분 동안 유효합니다.</p>
+<p style="margin:0;padding:18px;background:#F4EEEA;text-align:center;font-size:30px;letter-spacing:.3em;font-weight:700">${code}</p>
+<p style="margin:26px 0 0;font-size:12.5px;line-height:1.7;color:#8E8275">본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다. 문의: +81-92-406-5533</p>
+</td></tr></table></td></tr></table></body></html>`;
+}
+
+async function sendCodeMail(env, email, code, name) {
+  if (!env.RESEND_API_KEY) return { skipped: true };
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify({
+      from: env.MAIL_FROM || 'K-RICH CLINIC <onboarding@resend.dev>',
+      to: [email],
+      subject: `[K-RICH CLINIC] 인증 번호 ${code}`,
+      html: verifyEmailHtml(code, name),
+    }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    return { error: true, detail: t.slice(0, 200) };
+  }
+  return { ok: true };
+}
+
+async function issueCode(env, email, name) {
+  const code = newCode();
+  const now = new Date();
+  await env.DB.prepare('UPDATE accounts SET code_hash = ?, code_expires = ?, code_tries = 0, code_sent_at = ? WHERE email = ?')
+    .bind(await codeHash(code, email, env.SESSION_SECRET), new Date(now.getTime() + CODE_TTL_MIN * 60000).toISOString(), now.toISOString(), email).run();
+  return sendCodeMail(env, email, code, name);
 }
 
 const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && v.length <= 160;
@@ -261,13 +311,60 @@ export default {
       if (!phone) return json({ error: '전화번호를 입력해 주세요.' }, 400);
       if (pw.length < 8) return json({ error: '비밀번호는 8자 이상으로 정해주세요.' }, 400);
       if (pw.length > 200) return json({ error: '비밀번호가 너무 깁니다.' }, 400);
-      const exists = await env.DB.prepare('SELECT email FROM accounts WHERE email = ?').bind(email).first();
-      if (exists) return json({ error: '이미 가입된 이메일입니다. 로그인해 주세요.' }, 409);
+      const exists = await env.DB.prepare('SELECT email, verified FROM accounts WHERE email = ?').bind(email).first();
+      if (exists && exists.verified) return json({ error: '이미 가입된 이메일입니다. 로그인해 주세요.' }, 409);
       const { hash, salt } = await hashPassword(pw);
       const now = new Date().toISOString();
-      await env.DB.prepare('INSERT INTO accounts (email,name,phone,pw_hash,pw_salt,created_at,last_login) VALUES (?,?,?,?,?,?,?)')
-        .bind(email, name, phone, hash, salt, now, now).run();
-      return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email, name, phone } });
+      const mailOn = !!env.RESEND_API_KEY;
+      if (exists) {
+        // 미인증 상태로 남아 있던 가입은 덮어씁니다.
+        await env.DB.prepare('UPDATE accounts SET name = ?, phone = ?, pw_hash = ?, pw_salt = ?, created_at = ? WHERE email = ?')
+          .bind(name, phone, hash, salt, now, email).run();
+      } else {
+        await env.DB.prepare('INSERT INTO accounts (email,name,phone,pw_hash,pw_salt,created_at,last_login,verified) VALUES (?,?,?,?,?,?,?,?)')
+          .bind(email, name, phone, hash, salt, now, now, mailOn ? 0 : 1).run();
+      }
+      if (!mailOn) {
+        return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email, name, phone } });
+      }
+      const sent = await issueCode(env, email, name);
+      if (sent.error) return json({ error: '인증 메일을 보내지 못했습니다. 잠시 후 다시 시도하거나 전화로 문의해 주세요.' }, 502);
+      return json({ ok: true, needVerify: true, email });
+    }
+
+    /* 인증 번호 확인 */
+    if (path === '/account/verify' && request.method === 'POST') {
+      if (!env.SESSION_SECRET) return json({ error: 'SESSION_SECRET not configured' }, 500);
+      const email = str(body.email, 160).toLowerCase();
+      const code = str(body.code, 10).replace(/\D/g, '');
+      const row = await env.DB.prepare('SELECT * FROM accounts WHERE email = ?').bind(email).first();
+      if (!row) return json({ error: '가입 정보를 찾을 수 없습니다.' }, 404);
+      if (row.verified) return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email: row.email, name: row.name, phone: row.phone } });
+      if (!row.code_hash || !row.code_expires) return json({ error: '인증 번호를 다시 받아주세요.' }, 400);
+      if (new Date(row.code_expires) < new Date()) return json({ error: '인증 번호가 만료되었습니다. 다시 받아주세요.' }, 400);
+      if ((row.code_tries || 0) >= CODE_MAX_TRIES) return json({ error: '입력 횟수를 초과했습니다. 인증 번호를 다시 받아주세요.' }, 429);
+      if (!timingSafeEqual(await codeHash(code, email, env.SESSION_SECRET), row.code_hash)) {
+        await env.DB.prepare('UPDATE accounts SET code_tries = code_tries + 1 WHERE email = ?').bind(email).run();
+        return json({ error: `인증 번호가 올바르지 않습니다. (${CODE_MAX_TRIES - (row.code_tries || 0) - 1}회 남음)` }, 400);
+      }
+      await env.DB.prepare('UPDATE accounts SET verified = 1, code_hash = NULL, code_expires = NULL, code_tries = 0, last_login = ? WHERE email = ?')
+        .bind(new Date().toISOString(), email).run();
+      return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email: row.email, name: row.name, phone: row.phone } });
+    }
+
+    /* 인증 번호 재발송 */
+    if (path === '/account/resend' && request.method === 'POST') {
+      if (!env.RESEND_API_KEY) return json({ error: '이메일 인증이 설정되지 않았습니다.' }, 400);
+      const email = str(body.email, 160).toLowerCase();
+      const row = await env.DB.prepare('SELECT email, name, verified, code_sent_at FROM accounts WHERE email = ?').bind(email).first();
+      if (!row) return json({ error: '가입 정보를 찾을 수 없습니다.' }, 404);
+      if (row.verified) return json({ error: '이미 인증된 계정입니다.' }, 400);
+      if (row.code_sent_at && (Date.now() - new Date(row.code_sent_at).getTime()) < CODE_RESEND_SEC * 1000) {
+        return json({ error: `잠시 후 다시 시도해 주세요. (${CODE_RESEND_SEC}초에 한 번)` }, 429);
+      }
+      const sent = await issueCode(env, email, row.name);
+      if (sent.error) return json({ error: '인증 메일을 보내지 못했습니다.' }, 502);
+      return json({ ok: true });
     }
 
     if (path === '/account/login' && request.method === 'POST') {
@@ -278,6 +375,10 @@ export default {
       const row = await env.DB.prepare('SELECT * FROM accounts WHERE email = ?').bind(email).first();
       if (!row || !(await checkPassword(pw, row.pw_hash, row.pw_salt))) {
         return json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, 401);
+      }
+      if (env.RESEND_API_KEY && !row.verified) {
+        await issueCode(env, email, row.name);
+        return json({ ok: true, needVerify: true, email });
       }
       await env.DB.prepare('UPDATE accounts SET last_login = ? WHERE email = ?').bind(new Date().toISOString(), email).run();
       return json({ ok: true, token: await makeSession(env.SESSION_SECRET, email), account: { email: row.email, name: row.name, phone: row.phone } });

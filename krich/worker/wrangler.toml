@@ -6,6 +6,8 @@ compatibility_date = "2026-01-01"
 OPENAI_MODEL = "gpt-4o-mini"
 # 사이트 도메인만 허용, 쉼표 구분 (로컬 테스트 시 http://localhost:8765 추가)
 ALLOWED_ORIGINS = "https://smailab.github.io,https://krich-clinic.pages.dev"
+# 인증 메일 발신 주소. RESEND_API_KEY를 등록해야 이메일 인증이 켜집니다.
+MAIL_FROM = "K-RICH CLINIC <onboarding@resend.dev>"
 
 # 예약 저장소 (D1)
 [[d1_databases]]
@@ -16,6 +18,7 @@ database_id = "7c7b6f3d-04de-47e6-977c-0c36cce9c141"
 # 시크릿은 여기에 적지 말고 아래 명령으로 저장:
 #   npx wrangler secret put OPENAI_API_KEY
 #   npx wrangler secret put ADMIN_PASSWORD
+#   npx wrangler secret put RESEND_API_KEY   (선택: 등록 시 이메일 인증 활성화)
 
 # 예약 시간 중복 방지 (강한 일관성)
 [[durable_objects.bindings]]

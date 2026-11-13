@@ -37,3 +37,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- 예약에 회원 연결
 ALTER TABLE bookings ADD COLUMN account_email TEXT;
 CREATE INDEX IF NOT EXISTS idx_bookings_account ON bookings(account_email);
+
+-- 이메일 인증 (accounts 확장)
+-- verified: 0 미인증, 1 인증 완료
+-- code_hash/code_expires/code_tries/code_sent_at: 6자리 인증 코드 상태
