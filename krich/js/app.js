@@ -33,7 +33,7 @@
   }
   /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
   const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '' } : null;
-  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.label}</a>` : `<a class="btn btn-ai ${extra}" href="#chat" data-open-chat>AI 상담</a>`;
+  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.label}</a>` : `<a class="btn btn-outline ${extra}" href="#chat" data-open-chat>AI 상담</a>`;
 
   /* ---------- header / footer ---------- */
   function header() {
