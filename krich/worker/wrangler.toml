@@ -7,5 +7,20 @@ OPENAI_MODEL = "gpt-4o-mini"
 # 사이트 도메인만 허용, 쉼표 구분 (로컬 테스트 시 http://localhost:8765 추가)
 ALLOWED_ORIGINS = "https://smailab.github.io,https://krich-clinic.pages.dev"
 
-# OPENAI_API_KEY 는 여기에 적지 말고 시크릿으로 저장:
+# 예약 저장소 (Workers KV)
+[[kv_namespaces]]
+binding = "BOOKINGS"
+id = "04ad1ba70196405aa20fef3ca39b9a55"
+
+# 시크릿은 여기에 적지 말고 아래 명령으로 저장:
 #   npx wrangler secret put OPENAI_API_KEY
+#   npx wrangler secret put ADMIN_PASSWORD
+
+# 예약 시간 중복 방지 (강한 일관성)
+[[durable_objects.bindings]]
+name = "SLOTS"
+class_name = "SlotRegistry"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SlotRegistry"]
