@@ -80,6 +80,7 @@
   }
 
   async function fetchRows() {
+    state.rows = [];
     $('#rows').innerHTML = '불러오는 중…';
     try {
       const qs = new URLSearchParams({ from: state.from, to: state.to, ...(state.status ? { status: state.status } : {}) });
@@ -92,7 +93,8 @@
   function render() {
     const rows = state.rows;
     const by = s => rows.filter(r => r.status === s).length;
-    $('#sum').innerHTML = `<b>${rows.length}건</b> · 확정 대기 ${by('pending')} · 확정 ${by('confirmed')} · 완료 ${by('done')} · 취소 ${by('cancelled')} · 노쇼 ${by('noshow')}`;
+    $('#sum').innerHTML = `<b>${rows.length}건</b> · 확정 대기 ${by('pending')} · 확정 ${by('confirmed')} · 완료 ${by('done')} · 취소 ${by('cancelled')} · 노쇼 ${by('noshow')}
+      <span class="muted" style="margin-left:8px">상세 화면의 상태가 정확합니다. 다른 기기에서 바꾼 상태는 목록에 최대 1분 뒤 반영됩니다.</span>`;
     if (!rows.length) { $('#rows').innerHTML = '<p class="muted">해당 기간에 예약이 없습니다.</p>'; return; }
     const slotCount = {};
     rows.filter(r => r.status !== 'cancelled').forEach(r => { const k = r.date + r.time; slotCount[k] = (slotCount[k] || 0) + 1; });
@@ -161,7 +163,9 @@
       wrap.querySelector('#dmsg').textContent = '저장 중…';
       try {
         await api('/admin/booking', { method: 'POST', body: JSON.stringify({ code: b.code, status: newStatus, adminNote: wrap.querySelector('#note').value }) });
-        close(); fetchRows();
+        const row = state.rows.find(r => r.code === b.code);
+        if (row) row.status = newStatus;            // 목록 캐시는 반영이 늦으므로 즉시 갱신
+        close(); render();
       } catch (e) { wrap.querySelector('#dmsg').textContent = '저장 실패: ' + e.message; wrap.querySelector('#save').disabled = false; }
     };
   }
