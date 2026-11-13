@@ -9,7 +9,7 @@
 - 원장 프로필·경력·사진(`img/doctor.jpg`), 로고(`brand/logo.svg`), 브랜드 색상(베이지 #F4EEEA/#E5D8CD, 브라운 #987F65/#402D10/#1A0F04), 세리프 헤딩
 - 마운자로 펜 가격은 클리닉 제공 실제 가격(4개 세트: 2.5mg ¥17,800 / 5mg ¥29,800 / 7.5mg ¥46,800 / 10mg ¥56,800). 카카오톡 채널은 공식 사이트에 없어 `CLINIC.kakao = null` (LINE으로 대체, URL 입력 시 자동 전환)
 - 역에서의 도보 시간은 지도 기준 추정치(약 4분/8분)
-주소: `https://smailab.github.io/krich/`
+주소: `https://smailab.github.io/krich/` (Cloudflare Pages 프로젝트 `krich-clinic`도 준비됨 – GitHub 연결 시 `krich-clinic.pages.dev`)
 
 ## 페이지
 | 파일 | 내용 |
@@ -22,6 +22,7 @@
 ## AI 챗봇 상담 (OpenAI)
 - 우측 하단 💬 AI 상담 버튼(히어로·헤더·푸터·모바일 바에서도 열림). `js/chat.js`가 사이트 데이터(가격·FAQ·반입 가이드·문진 등)로 시스템 프롬프트를 만들어 OpenAI chat completions를 스트리밍 호출
 - **API 키는 사이트에 넣지 않습니다.** Cloudflare Worker 프록시 `https://krich-chat.hyunsh99.workers.dev` 배포 완료, `CHATBOT.endpoint`에 연결됨
+- 호출 허용 도메인: `https://smailab.github.io`, `https://krich-clinic.pages.dev` (워커 `ALLOWED_ORIGINS`)
 - 남은 단계: Cloudflare 대시보드 → Workers & Pages → `krich-chat` → Settings → Variables and Secrets 에서 `OPENAI_API_KEY` 시크릿 등록 (`worker/README.md` 참고)
 - 프록시 배포 전에는 챗봇 창 ⚙에서 관리자 테스트 키를 브라우저에만 저장해 테스트 가능
 - 모델 기본값 `gpt-4o-mini` (`CHATBOT.model`, 프록시의 `OPENAI_MODEL`), 대화는 sessionStorage에 유지, 최근 12턴만 전송
