@@ -4,7 +4,7 @@
  * 3) /slots         : 날짜별 마감 시간 조회
  * 4) /admin/*       : 관리자 로그인·예약 목록·상태 변경
  *
- * 바인딩: BOOKINGS (KV)
+ * 바인딩: DB (D1), SLOTS (Durable Object)
  * 시크릿: OPENAI_API_KEY, ADMIN_PASSWORD
  * 변수  : OPENAI_MODEL, ALLOWED_ORIGINS
  */
@@ -82,7 +82,23 @@ const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isTime = s => /^\d{2}:\d{2}$/.test(s);
 const hhmm = t => String(t).replace(':', '');
-const key = b => `b:${b.date}:${hhmm(b.time)}:${b.code}`;
+
+const toRow = b => ([b.code, b.createdAt, b.updatedAt, b.status, b.date, b.time, b.visit, b.dose, b.pack, b.receive,
+  JSON.stringify(b.extras || []), b.mix, b.total, b.info.name, b.info.ename, b.info.birth, b.info.sex, b.info.phone,
+  b.info.contact, b.info.height, b.info.weight, b.info.meds, b.info.stay, b.info.fridge, b.info.prior,
+  JSON.stringify(b.screening || []), b.adminNote || '']);
+
+const fromRow = r => r && ({
+  code: r.code, createdAt: r.created_at, updatedAt: r.updated_at, status: r.status,
+  date: r.visit_date, time: r.visit_time, visit: r.visit_type, dose: r.dose, pack: r.pack, receive: r.receive,
+  extras: JSON.parse(r.extras || '[]'), mix: r.mix, total: r.total,
+  info: { name: r.name, ename: r.ename, birth: r.birth, sex: r.sex, phone: r.phone, contact: r.contact,
+    height: r.height, weight: r.weight, meds: r.meds, stay: r.stay, fridge: r.fridge, prior: r.prior },
+  screening: JSON.parse(r.screening || '[]'), adminNote: r.admin_note || '',
+});
+
+const INSERT_SQL = `INSERT INTO bookings (code,created_at,updated_at,status,visit_date,visit_time,visit_type,dose,pack,receive,extras,mix,total,name,ename,birth,sex,phone,contact,height,weight,meds,stay,fridge,prior,screening,admin_note)
+  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)`;
 
 /* ---------- handlers ---------- */
 async function createBooking(body, env) {
@@ -120,29 +136,38 @@ async function createBooking(body, env) {
     }).then(r => r.json()).catch(() => ({ ok: true }));
     if (claim.conflict) return { error: '방금 다른 분이 같은 시간을 예약했습니다. 다른 시간을 선택해 주세요.', status: 409 };
   }
-  const meta = { code: b.code, status: b.status, time: b.time, name: b.info.name, dose: b.dose, total: b.total };
-  await env.BOOKINGS.put(key(b), JSON.stringify(b), { metadata: meta });
-  await env.BOOKINGS.put(`c:${b.code}`, key(b));
+  try {
+    await env.DB.prepare(INSERT_SQL).bind(...toRow(b)).run();
+  } catch (e) {
+    if (env.SLOTS) await slotStub(env, b.date).fetch('https://do/release', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: b.time }) }).catch(() => {});
+    return { error: '예약을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.', status: 500 };
+  }
   return { ok: true, code: b.code, createdAt: b.createdAt };
 }
 
 async function listBookings(env, { from, to, status }) {
-  const out = [];
-  let cursor;
-  do {
-    const r = await env.BOOKINGS.list({ prefix: 'b:', cursor, limit: 1000 });
-    for (const k of r.keys) {
-      const d = k.name.split(':')[1];
-      if (from && d < from) continue;
-      if (to && d > to) continue;
-      const m = k.metadata || {};
-      if (status && m.status !== status) continue;
-      out.push({ k: k.name, date: d, ...m });
-    }
-    cursor = r.list_complete ? null : r.cursor;
-  } while (cursor);
-  out.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  return out;
+  const where = [], bind = [];
+  if (from) { where.push('visit_date >= ?'); bind.push(from); }
+  if (to) { where.push('visit_date <= ?'); bind.push(to); }
+  if (status) { where.push('status = ?'); bind.push(status); }
+  const sql = `SELECT code, visit_date AS date, visit_time AS time, status, name, dose, total
+    FROM bookings ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY visit_date, visit_time LIMIT 2000`;
+  const r = await env.DB.prepare(sql).bind(...bind).all();
+  return r.results || [];
+}
+
+async function getBooking(env, code) {
+  const r = await env.DB.prepare('SELECT * FROM bookings WHERE code = ?').bind(code).first();
+  return fromRow(r);
+}
+
+async function setStatus(env, code, status, note) {
+  const sets = ['updated_at = ?'], bind = [new Date().toISOString()];
+  if (status !== undefined) { sets.push('status = ?'); bind.push(status); }
+  if (note !== undefined) { sets.push('admin_note = ?'); bind.push(note); }
+  bind.push(code);
+  await env.DB.prepare(`UPDATE bookings SET ${sets.join(', ')} WHERE code = ?`).bind(...bind).run();
 }
 
 /* ---------- entry ---------- */
@@ -182,7 +207,7 @@ export default {
       return new Response(upstream.body, { status: upstream.status, headers: h });
     }
 
-    if (!env.BOOKINGS) return json({ error: 'BOOKINGS KV not bound' }, 500);
+    if (!env.DB) return json({ error: 'D1 database not bound' }, 500);
 
     /* ----- 예약 접수 ----- */
     if (path === '/booking' && request.method === 'POST') {
@@ -194,9 +219,7 @@ export default {
     if (path === '/booking/lookup' && request.method === 'POST') {
       const code = str(body.code, 20).toUpperCase(), birth = str(body.birth, 10);
       if (!code || !birth) return json({ error: '예약번호와 생년월일을 입력해 주세요.' }, 400);
-      const k = await env.BOOKINGS.get(`c:${code}`);
-      if (!k) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
-      const rec = JSON.parse((await env.BOOKINGS.get(k)) || 'null');
+      const rec = await getBooking(env, code);
       if (!rec || rec.info.birth !== birth) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
       return json({ ok: true, booking: { code: rec.code, status: rec.status, date: rec.date, time: rec.time, dose: rec.dose, pack: rec.pack, total: rec.total, name: rec.info.name, adminNote: rec.adminNote } });
     }
@@ -204,12 +227,9 @@ export default {
     /* ----- 예약 취소 (본인) ----- */
     if (path === '/booking/cancel' && request.method === 'POST') {
       const code = str(body.code, 20).toUpperCase(), birth = str(body.birth, 10);
-      const k = await env.BOOKINGS.get(`c:${code}`);
-      if (!k) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
-      const rec = JSON.parse((await env.BOOKINGS.get(k)) || 'null');
+      const rec = await getBooking(env, code);
       if (!rec || rec.info.birth !== birth) return json({ error: '예약을 찾을 수 없습니다.' }, 404);
-      rec.status = 'cancelled'; rec.updatedAt = new Date().toISOString();
-      await env.BOOKINGS.put(k, JSON.stringify(rec), { metadata: { code: rec.code, status: rec.status, time: rec.time, name: rec.info.name, dose: rec.dose, total: rec.total } });
+      await setStatus(env, code, 'cancelled');
       if (env.SLOTS) await slotStub(env, rec.date).fetch('https://do/release', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: rec.time }) }).catch(() => {});
       return json({ ok: true });
     }
@@ -222,10 +242,8 @@ export default {
         const j = await slotStub(env, d).fetch('https://do/taken').then(r => r.json()).catch(() => null);
         if (j && Array.isArray(j.taken)) return json({ date: d, taken: j.taken });
       }
-      const r = await env.BOOKINGS.list({ prefix: `b:${d}:` });
-      const taken = r.keys.filter(k => (k.metadata || {}).status !== 'cancelled')
-        .map(k => (k.metadata || {}).time || (p => p.length === 4 ? p.slice(0, 2) + ':' + p.slice(2) : p)(k.name.split(':')[2]));
-      return json({ date: d, taken });
+      const r = await env.DB.prepare("SELECT visit_time FROM bookings WHERE visit_date = ? AND status != 'cancelled'").bind(d).all();
+      return json({ date: d, taken: (r.results || []).map(x => x.visit_time) });
     }
 
     /* ----- 관리자 ----- */
@@ -264,32 +282,22 @@ export default {
       }
 
       if (path === '/admin/booking' && request.method === 'GET') {
-        const code = (url.searchParams.get('code') || '').toUpperCase();
-        const k = await env.BOOKINGS.get(`c:${code}`);
-        if (!k) return json({ error: 'not found' }, 404);
-        const rec = JSON.parse((await env.BOOKINGS.get(k)) || 'null');
+        const rec = await getBooking(env, (url.searchParams.get('code') || '').toUpperCase());
         return rec ? json({ ok: true, booking: rec }) : json({ error: 'not found' }, 404);
       }
 
       if (path === '/admin/booking' && request.method === 'POST') {
         const code = str(body.code, 20).toUpperCase();
-        const k = await env.BOOKINGS.get(`c:${code}`);
-        if (!k) return json({ error: 'not found' }, 404);
-        const rec = JSON.parse((await env.BOOKINGS.get(k)) || 'null');
+        const rec = await getBooking(env, code);
         if (!rec) return json({ error: 'not found' }, 404);
-        if (body.status !== undefined) {
-          if (!STATUSES.includes(body.status)) return json({ error: 'invalid status' }, 400);
-          const was = rec.status;
-          rec.status = body.status;
-          if (env.SLOTS && was !== body.status) {
-            const op = body.status === 'cancelled' ? 'release' : (was === 'cancelled' ? 'claim' : null);
-            if (op) await slotStub(env, rec.date).fetch('https://do/' + op, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: rec.time, code: rec.code }) }).catch(() => {});
-          }
+        if (body.status !== undefined && !STATUSES.includes(body.status)) return json({ error: 'invalid status' }, 400);
+        const note = body.adminNote !== undefined ? str(body.adminNote, 1000) : undefined;
+        await setStatus(env, code, body.status, note);
+        if (env.SLOTS && body.status !== undefined && body.status !== rec.status) {
+          const op = body.status === 'cancelled' ? 'release' : (rec.status === 'cancelled' ? 'claim' : null);
+          if (op) await slotStub(env, rec.date).fetch('https://do/' + op, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: rec.time, code: rec.code }) }).catch(() => {});
         }
-        if (body.adminNote !== undefined) rec.adminNote = str(body.adminNote, 1000);
-        rec.updatedAt = new Date().toISOString();
-        await env.BOOKINGS.put(k, JSON.stringify(rec), { metadata: { code: rec.code, status: rec.status, time: rec.time, name: rec.info.name, dose: rec.dose, total: rec.total } });
-        return json({ ok: true, booking: rec });
+        return json({ ok: true, booking: await getBooking(env, code) });
       }
     }
 

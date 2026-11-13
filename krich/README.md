@@ -33,6 +33,13 @@
 ## 원화 환산
 - 모든 엔화 가격 옆에 `(약 ○○원)`을 표시. 페이지 로드 시 실시간 환율(jsdelivr currency-api → open.er-api.com 순)을 받아 갱신하고, 실패하면 `FX.krwPerJpy` 기준값(100엔=853.84원, 2026-11-06) 사용. 100원 단위 반올림, 참고용 표기
 
+## 예약 저장·관리
+- 예약은 Cloudflare **D1** 데이터베이스 `krich-bookings`에 저장됩니다 (`worker/schema.sql`)
+- 같은 시간 중복 예약은 Durable Object `SlotRegistry`가 차단합니다 (KV와 달리 즉시 일관성)
+- 관리자 페이지 `admin.html`: 비밀번호 로그인 → 기간·상태별 목록, 상세(문진 포함), 상태 변경(확정 대기/확정/방문 완료/취소/노쇼), 관리자 메모, 시간 차단·해제, CSV 내려받기
+- 손님은 `book.html?my=1`에서 예약번호 + 생년월일로 어느 기기에서나 조회·취소 가능
+- 비밀번호는 Worker 시크릿 `ADMIN_PASSWORD`. 변경: `cd krich/worker && npx wrangler secret put ADMIN_PASSWORD`
+
 ## 예약 로직
 - 초진은 2.5mg만 선택 가능, 재진은 모든 용량 선택 가능
 - 1회 최대 12개(한국 휴대 반입 한도 3개월분) – `CLINIC.maxPens`
@@ -61,6 +68,6 @@
 2. `PRICES`의 12.5mg·15mg 가격(현재 '문의'), 8/12주 패키지 할인율(현재 0) 확인. 혈액검사·배송·보냉 가방·주사바늘 항목은 요청에 따라 삭제됨 – 가격표·히어로 카드·예약 요약에 자동 반영
 3. `DOCTORS`, `REVIEWS`, 통계 수치(index.html `.stats`)를 실제 내용으로 교체
 4. 지도 iframe은 `CLINIC.mapEmbed`(주소 검색 embed)로 표시 – 필요 시 정확한 좌표 embed로 교체
-5. 예약 데이터를 실제로 받으려면 백엔드 연동 필요 (현재는 `js/app.js` `#submit` 핸들러에서 localStorage에만 저장) – 예: Google Forms/Sheets, Formspree, Supabase, 예약 SaaS
-6. 시간대별 마감 슬롯은 데모용 의사난수 (`slotsFor`) – 실제 스케줄로 교체
+5. `ADMIN_PASSWORD` 변경 (현재 임시 비밀번호가 설정되어 있음)
+6. 예약 확정 시 손님에게 자동 알림(이메일/문자)은 아직 없음 – 필요하면 Worker에 연동
 7. 의료광고·의약품 반입 안내 문구는 일본 의료법·한국 관세/식약처 규정에 맞게 법률 검토

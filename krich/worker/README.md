@@ -43,11 +43,18 @@ const CHATBOT = { endpoint: 'https://krich-chat.<계정>.workers.dev', ... };
 - `https://krich-chat.<계정>.workers.dev/health` → `{"ok":true}`
 - 사이트에서 💬 AI 상담 버튼 → 질문 → 답변이 스트리밍되면 정상
 
+## 예약 저장소 (D1)
+- 데이터베이스 `krich-bookings`, 테이블 `bookings` (`schema.sql`)
+- 바인딩 `DB`. 스키마 적용: `npx wrangler d1 execute krich-bookings --remote --file=schema.sql`
+- 조회 예: `npx wrangler d1 execute krich-bookings --remote --command "SELECT visit_date, visit_time, name, status FROM bookings ORDER BY visit_date"`
+- 예약 시간 중복은 Durable Object `SlotRegistry`가 날짜별로 잠금을 관리해 막습니다. 예약 취소 시 자동 해제되며, 관리자 화면의 "시간 차단·해제"로 수동 조작할 수 있습니다.
+
 ## 설정값
 | 이름 | 설명 |
 |---|---|
 | `OPENAI_API_KEY` | 시크릿. `wrangler secret put`으로만 저장 |
 | `OPENAI_MODEL` | 기본 `gpt-4o-mini` (저렴·빠름). 더 높은 품질이 필요하면 `gpt-4o` 등으로 변경 |
+| `ADMIN_PASSWORD` | 시크릿. 관리자 페이지(`admin.html`) 비밀번호. 변경: `npx wrangler secret put ADMIN_PASSWORD` |
 | `ALLOWED_ORIGINS` | 호출을 허용할 사이트 도메인(쉼표 구분). 다른 사이트가 키를 무단 사용하지 못하게 막음. 현재: `https://smailab.github.io`, `https://krich-clinic.pages.dev` |
 
 도메인을 추가하려면 `wrangler.toml`의 `ALLOWED_ORIGINS`에 쉼표로 덧붙이고 `npx wrangler deploy`를 실행하세요. 재배포해도 `OPENAI_API_KEY` 시크릿은 유지됩니다. Pages 미리보기 주소(`<해시>.krich-clinic.pages.dev`)는 정확히 일치하지 않으므로 허용되지 않습니다.
