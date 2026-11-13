@@ -7,7 +7,7 @@
 - 주소 〒810-0041 福岡県福岡市中央区大名2丁目12-18 GMビル赤坂 6階, 전화 092-406-5533, 접수 10:00~19:00, 휴진 비정기
 - LINE 공식계정 https://lin.ee/eucnbtM, 공식 WEB 예약(medical-force), Instagram @k_rich_clinic, Google Maps 링크
 - 원장 프로필·경력·사진(`img/doctor.jpg`), 로고(`brand/logo.svg`), 브랜드 색상(베이지 #F4EEEA/#E5D8CD, 브라운 #987F65/#402D10/#1A0F04), 세리프 헤딩
-- **마운자로 가격은 공식 요금표(k-rich.jp/price)에 없음** → `PRICES`는 샘플. 카카오톡 채널은 공식 사이트에 없어 `CLINIC.kakao = null` (LINE으로 대체, URL 입력 시 자동 전환)
+- 마운자로 펜 가격은 클리닉 제공 실제 가격(4개 세트: 2.5mg ¥17,800 / 5mg ¥29,800 / 7.5mg ¥46,800 / 10mg ¥56,800). 혈액검사·배송비·옵션 가격은 샘플. 카카오톡 채널은 공식 사이트에 없어 `CLINIC.kakao = null` (LINE으로 대체, URL 입력 시 자동 전환)
 - 역에서의 도보 시간은 지도 기준 추정치(약 4분/8분)
 주소: `https://smailab.github.io/krich/`
 
@@ -18,6 +18,9 @@
 | `book.html` | 예약 – 4단계: 진료 선택(초진/재진·용량·수량·수령 방법(내원/호텔 냉장 배송)·옵션) → 날짜·시간 → 예약자 정보·BMI·체류/숙소 냉장고·기존 투여·사전 문진 → 확인·예약번호 발급 |
 | `book.html?my=1` | 내 예약 확인·취소 (브라우저 localStorage) |
 | `book.html?pack=p8` | 패키지 미리 선택 (`p4`/`p8`/`p12`) |
+
+## 원화 환산
+- 모든 엔화 가격 옆에 `(약 ○○원)`을 표시. 페이지 로드 시 실시간 환율(jsdelivr currency-api → open.er-api.com 순)을 받아 갱신하고, 실패하면 `FX.krwPerJpy` 기준값(100엔=853.84원, 2026-11-06) 사용. 100원 단위 반올림, 참고용 표기
 
 ## 예약 로직
 - 초진은 2.5mg만 선택 가능, 재진은 모든 용량 선택 가능
@@ -43,7 +46,7 @@
 
 ## 운영 전 해야 할 일
 1. `js/data.js`의 `CLINIC`에서 카카오톡 채널 URL(`kakao`), 휴진일(`closedDates`), 점심시간(`lunch`) 확인·입력
-2. `PRICES` (펜 단가, 패키지 할인, 상담료, 옵션)를 실제 가격으로 교체 – 가격표·히어로 카드·예약 요약에 자동 반영
+2. `PRICES`의 12.5mg·15mg 가격(현재 '문의'), 8/12주 패키지 할인율(현재 0), 혈액검사·배송비·옵션 가격 확인 – 가격표·히어로 카드·예약 요약에 자동 반영
 3. `DOCTORS`, `REVIEWS`, 통계 수치(index.html `.stats`)를 실제 내용으로 교체
 4. 지도 iframe은 `CLINIC.mapEmbed`(주소 검색 embed)로 표시 – 필요 시 정확한 좌표 embed로 교체
 5. 예약 데이터를 실제로 받으려면 백엔드 연동 필요 (현재는 `js/app.js` `#submit` 핸들러에서 localStorage에만 저장) – 예: Google Forms/Sheets, Formspree, Supabase, 예약 SaaS

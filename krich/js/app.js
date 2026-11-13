@@ -1,7 +1,22 @@
 /* K-Rich Clinic – 공통 UI + 랜딩 렌더링 + 예약 플로우 */
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
-  const yen = n => '¥' + Number(n).toLocaleString('ja-JP');
+  const yen = n => '¥' + Math.round(Number(n)).toLocaleString('ja-JP');
+  const krwOf = n => Math.round(n * FX.krwPerJpy / 100) * 100;
+  const krw = n => '약 ' + krwOf(n).toLocaleString('ko-KR') + '원';
+  /* 엔 + (원화) 표기. 원화 부분은 환율 수신 후 자동 갱신 */
+  const yk = (n, cls = '') => `${yen(n)} <span class="krw ${cls}" data-jpy="${n}">(${krw(n)})</span>`;
+  function applyFx() { document.querySelectorAll('.krw[data-jpy]').forEach(el => { el.textContent = '(' + krw(+el.dataset.jpy) + ')'; }); document.querySelectorAll('.fx-note').forEach(el => { el.textContent = `원화는 ${FX.live ? '실시간' : '기준'} 환율 100엔 = ${(FX.krwPerJpy * 100).toFixed(2)}원 (${FX.asOf}) 기준 참고용이며, 실제 청구는 엔화로 이루어집니다.`; }); }
+  async function loadFx() {
+    for (const src of FX.sources) {
+      try {
+        const r = await fetch(src.url, { cache: 'no-store' }); if (!r.ok) continue;
+        const j = await r.json(); const v = +src.pick(j);
+        if (v > 1 && v < 20) { FX.krwPerJpy = v; FX.asOf = (src.date(j) || new Date().toISOString().slice(0, 10)); FX.live = true; applyFx(); document.dispatchEvent(new Event('fx')); return; }
+      } catch (e) { /* 다음 소스 시도 */ }
+    }
+    applyFx();
+  }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STORE_KEY = 'krich_bookings';
   const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' };
@@ -85,22 +100,22 @@
   /* ---------- landing ---------- */
   function home() {
     const first = PRICES.pens[0];
-    $('#hero-price').innerHTML = `${yen(first.price * 4)} <small>세금 포함</small>`;
+    $('#hero-price').innerHTML = `${yen(first.set4)} <small>세금 포함</small><span class="krw hero-krw" data-jpy="${first.set4}">(${krw(first.set4)})</span>`;
 
     $('#why-grid').innerHTML = WHY.map(w => `<div class="card"><div class="icon">${w.icon}</div><h3>${esc(w.title)}</h3><p>${esc(w.desc)}</p></div>`).join('');
 
-    $('#dose-rows').innerHTML = PRICES.pens.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar" style="width:${(p.dose / 15) * 100}%"></div><span>${esc(p.weeks)}</span></div>`).join('');
+    $('#dose-rows').innerHTML = PRICES.dosesInfo.map(p => `<div class="dose-row"><b>${p.dose}mg</b><div class="bar" style="width:${(p.dose / 15) * 100}%"></div><span>${esc(p.weeks)}</span></div>`).join('');
 
-    $('#pen-rows').innerHTML = PRICES.pens.map(p => `<tr><td>마운자로 ${p.dose}mg ${p.first ? '<span class="tag">초진 시작 용량</span>' : ''}<span class="sub">${esc(p.weeks)} · 1펜 = 1주분</span></td><td class="num">${yen(p.price)}</td></tr>`).join('');
-    $('#consult-rows').innerHTML = PRICES.consult.map(c => `<tr><td>${esc(c.name)}<span class="sub">${esc(c.note)}</span></td><td class="num">${c.price === 0 ? '¥0' : yen(c.price)}</td></tr>`).join('');
+    $('#pen-rows').innerHTML = PRICES.pens.map(p => `<tr><td>마운자로 ${p.dose}mg × 4개 (4주분) ${p.first ? '<span class="tag">초진 시작 용량</span>' : ''}<span class="sub">${esc(p.weeks)} · 1펜 = 1주분 · 펜 1개당 ${yen(p.price)}</span></td><td class="num">${yen(p.set4)}<span class="krw" data-jpy="${p.set4}">(${krw(p.set4)})</span></td></tr>`).join('');
+    $('#consult-rows').innerHTML = PRICES.consult.map(c => `<tr><td>${esc(c.name)}<span class="sub">${esc(c.note)}</span></td><td class="num">${c.price === 0 ? '¥0' : yen(c.price) + `<span class="krw" data-jpy="${c.price}">(${krw(c.price)})</span>`}</td></tr>`).join('');
 
     $('#pack-cards').innerHTML = PRICES.packs.map((pk, i) => {
       const base = first.price * pk.pens, total = Math.round(base * (1 - pk.discount));
       return `<div class="pack ${i === 2 ? 'best' : ''}">${i === 2 ? '<span class="ribbon">BEST</span>' : ''}
         <h3>2.5mg ${esc(pk.label)}</h3>
-        <div class="price">${yen(total)} <small>세금 포함</small></div>
-        ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : '<div class="save" style="color:var(--ink-3)">기본 구성</div>'}
-        <ul><li>의사 진료 + 통역 동석</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.pens >= 8 ? '<li>보냉 가방 + 아이스팩 증정</li>' : ''}${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
+        <div class="price">${yen(total)} <small>세금 포함</small><span class="krw" data-jpy="${total}">(${krw(total)})</span></div>
+        ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : `<div class="save" style="color:var(--ink-3)">${pk.pens === 4 ? '기본 구성' : '4개 세트 × ' + (pk.pens / 4)}</div>`}
+        <ul><li>원장 한국어 직접 진료</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.pens >= 8 ? '<li>보냉 가방 + 아이스팩 증정</li>' : ''}${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
         <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-block" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
     }).join('');
 
@@ -108,9 +123,9 @@
     $('#trial-stats').innerHTML = TRIAL.stats.map(t => `<div class="trial-stat"><b>${t.v}</b><span>${esc(t.k)}</span></div>`).join('');
     $('#trial-source').textContent = '출처: ' + TRIAL.source;
 
-    const krw = n => '약 ' + (Math.round(n / 1000) * 1000).toLocaleString('ko-KR') + '원';
-    const maxKrw = Math.max(...PRICES.compare.map(c => c.krw || c.jpy * PRICES.fxKrwPer100Jpy / 100));
-    $('#compare-rows').innerHTML = PRICES.compare.map(c => { const k = c.krw || c.jpy * PRICES.fxKrwPer100Jpy / 100; return `<div class="cmp-row ${c.us ? 'us' : ''}"><div class="cl"><b>${esc(c.label)}</b><span class="muted">${esc(c.note)}</span></div><div class="cb"><div class="cf" style="width:${(k / maxKrw) * 100}%"></div></div><div class="cv">${c.jpy ? yen(c.jpy) + '<small>' + krw(k) + '</small>' : krw(k)}</div></div>`; }).join('');
+    const renderCompare = () => { const maxKrw = Math.max(...PRICES.compare.map(c => c.krw || krwOf(c.jpy)));
+      $('#compare-rows').innerHTML = PRICES.compare.map(c => { const k = c.krw || krwOf(c.jpy); return `<div class="cmp-row ${c.us ? 'us' : ''}"><div class="cl"><b>${esc(c.label)}</b><span class="muted">${esc(c.note)}</span></div><div class="cb"><div class="cf" style="width:${(k / maxKrw) * 100}%"></div></div><div class="cv">${c.jpy ? yen(c.jpy) + '<small>' + krw(c.jpy) + '</small>' : '약 ' + k.toLocaleString('ko-KR') + '원'}</div></div>`; }).join(''); };
+    renderCompare(); document.addEventListener('fx', renderCompare);
 
     $('#bring-grid').innerHTML = BRING.map(b => `<div class="card"><div class="icon">${b.icon}</div><h3>${esc(b.title)}</h3><p>${esc(b.desc)}</p></div>`).join('');
     $('#qty-rows').innerHTML = QTY_GUIDE.map(q => `<tr><td>${esc(q.stay)}</td><td>${esc(q.shots)}</td><td class="num">${esc(q.home)}</td></tr>`).join('');
@@ -176,7 +191,7 @@
       ${p.extras ? `<div><dt>배송·추가 옵션</dt><dd>${yen(p.extras)}</dd></div>` : ''}
       <div><dt>상담료</dt><dd>¥0</dd></div>
     </dl>
-    <div class="total"><span>예상 금액<small>세금 포함 · 원내 결제</small></span><span>${yen(p.total)}</span></div>
+    <div class="total"><span>예상 금액<small>세금 포함 · 원내 결제</small></span><span>${yen(p.total)}<small class="krw" data-jpy="${p.total}" style="text-align:right">(${krw(p.total)})</small></span></div>
     <p class="muted" style="margin:12px 0 0">최종 처방 용량·수량은 의사 진료 후 결정되며 금액이 달라질 수 있습니다.</p>`;
   }
 
@@ -192,15 +207,15 @@
         <button class="choice ${state.visit === 'repeat' ? 'selected' : ''}" data-v="repeat"><b>재진 / 이어서 처방</b><span>이미 사용 중 · 증량 용량 선택 가능</span></button>
       </div>
       <h3 style="margin:22px 0 10px">용량</h3>
-      <div class="choice-grid" id="dose">${PRICES.pens.map(p => `<button class="choice ${state.dose === p.dose ? 'selected' : ''}" data-d="${p.dose}" ${state.visit === 'first' && p.dose !== 2.5 ? 'disabled' : ''}><b>${p.dose}mg</b><span>${esc(p.weeks)}</span><span class="p">${yen(p.price)} / 펜</span></button>`).join('')}</div>
+      <div class="choice-grid" id="dose">${PRICES.pens.map(p => `<button class="choice ${state.dose === p.dose ? 'selected' : ''}" data-d="${p.dose}" ${state.visit === 'first' && p.dose !== 2.5 ? 'disabled' : ''}><b>${p.dose}mg</b><span>${esc(p.weeks)}</span><span class="p">${yen(p.set4)} / 4개 <span class="krw" data-jpy="${p.set4}">(${krw(p.set4)})</span></span></button>`).join('')}</div>
       <h3 style="margin:22px 0 10px">수량</h3>
       <div class="choice-grid" id="pack">${PRICES.packs.map(pk => `<button class="choice ${state.pack === pk.id ? 'selected' : ''}" data-p="${pk.id}"><b>${esc(pk.label)}</b><span>${pk.discount ? `${Math.round(pk.discount * 100)}% 할인` : '기본'}${pk.pens >= 8 ? ' · 보냉 가방 증정' : ''}${pk.note ? ' · ' + esc(pk.note) : ''}</span></button>`).join('')}</div>
       <p class="muted" style="margin:10px 0 0">일본에서 맞을 양 + 한국에 가져갈 양을 합쳐 최대 12개(3개월분)까지 처방합니다. 초진은 2.5mg 4개 + 5mg 8개처럼 증량 구성으로 드립니다.</p>
       <h3 style="margin:22px 0 10px">수령 방법</h3>
-      <div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yen(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>
+      <div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yk(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>
       ${state.receive === 'hotel' ? '<div class="notice" style="margin-top:10px">호텔 배송은 온라인 진료(LINE 영상) 후 1~3영업일에 도착합니다. 체크아웃 직전 수령은 피하고, 호텔에 냉장 택배가 온다고 미리 알려주세요. 해외 배송은 불가합니다.</div>' : ''}
       <h3 style="margin:22px 0 10px">추가 옵션</h3>
-      <div class="grid" style="gap:8px">${PRICES.extras.map(e => `<label class="check"><input type="checkbox" data-e="${e.id}" ${state.extras.includes(e.id) ? 'checked' : ''}><span><b>${esc(e.name)}</b> &nbsp;<span style="color:var(--green);font-weight:700">${e.price ? yen(e.price) : '무료'}</span>${e.note ? `<br><span class="muted">${esc(e.note)}</span>` : ''}</span></label>`).join('')}</div>
+      <div class="grid" style="gap:8px">${PRICES.extras.map(e => `<label class="check"><input type="checkbox" data-e="${e.id}" ${state.extras.includes(e.id) ? 'checked' : ''}><span><b>${esc(e.name)}</b> &nbsp;<span style="color:var(--green);font-weight:700">${e.price ? yk(e.price) : '무료'}</span>${e.note ? `<br><span class="muted">${esc(e.note)}</span>` : ''}</span></label>`).join('')}</div>
       <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4개 + 5mg 8개로 받고 싶어요 / 혈액검사 원해요">${esc(state.mix)}</textarea></label>
       <div class="actions"><span></span><button class="btn btn-primary" id="next">날짜 선택 →</button></div>`;
     el.querySelectorAll('#visit .choice').forEach(b => b.onclick = () => { state.visit = b.dataset.v; if (state.visit === 'first') state.dose = 2.5; step1(); summary(); });
@@ -331,7 +346,7 @@
         ${i.stay ? `<div><dt>체류·숙소</dt><dd>${esc(i.stay)}${i.fridge ? ' · 냉장고 ' + (i.fridge === 'yes' ? '있음' : '없음') : ''}</dd></div>` : ''}
         ${i.prior ? `<div><dt>기존 투여</dt><dd>${esc(i.prior)}</dd></div>` : ''}
         ${screens.length ? `<div><dt>문진 해당</dt><dd style="color:var(--red)">${screens.map(esc).join('<br>')}</dd></div>` : '<div><dt>문진</dt><dd>해당 사항 없음</dd></div>'}
-        <div><dt>예상 금액</dt><dd style="color:var(--green);font-weight:900">${yen(p.total)} <span class="muted">(원내 결제)</span></dd></div>
+        <div><dt>예상 금액</dt><dd style="color:var(--green);font-weight:900">${yk(p.total)} <span class="muted">· 원내 결제</span></dd></div>
       </dl></div>
       <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 LINE·전화로 꼭 취소해 주세요.</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
@@ -345,7 +360,7 @@
   }
 
   function kakaoText(r) {
-    return `[K-RICH CLINIC 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)}`;
+    return `[K-RICH CLINIC 마운자로 예약 요청]\n예약번호: ${r.code}\n일시: ${fmtDate(r.date)} ${r.time}\n구분: ${r.visit === 'first' ? '초진' : '재진'} / ${r.dose}mg / ${r.pack}\n수령: ${r.receive || '내원'}\n이름: ${r.info.name} (${r.info.ename})\n연락처: ${r.info.phone} / ${r.info.contact}\n예상 금액: ${yen(r.total)} (${krw(r.total)})`;
   }
 
   function done(r) {
@@ -353,7 +368,7 @@
     $('#step').innerHTML = `<div class="confirm"><div class="mark-ok">✓</div><h2>예약 요청이 접수되었습니다</h2>
       <p class="desc">아래 예약번호를 캡처해 두세요. 스태프가 접수 시간(10:00~19:00) 내에 ${esc(r.info.contact)}(으)로 확정 안내를 드립니다.</p>
       <div class="code">${r.code}</div>
-      <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yen(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
+      <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yk(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
         <button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
@@ -376,4 +391,5 @@
   const page = document.body.dataset.page;
   if (page === 'home') home();
   if (page === 'book') book();
+  loadFx();
 })();
