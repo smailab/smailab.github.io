@@ -334,7 +334,8 @@ details p { margin: 0 0 20px; color: var(--ink-2); font-size: 14.5px; max-width:
 .page-head { background: var(--ink); color: #fff; padding: 56px 0 44px; }
 .page-head h1 { color: #fff; font-size: clamp(26px, 3.8vw, 40px); }
 .page-head p { color: rgba(255,251,248,.65); margin: 12px 0 0; font-size: 15px; }
-.stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 32px 0 26px; }
+.stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 32px 0 26px; }
+@media (max-width: 560px) { .stepper div { font-size: 10.5px; } }
 .stepper div { font-size: 12px; color: var(--ink-3); border-top: 2px solid var(--line); padding-top: 9px; }
 .stepper div.active { color: var(--ink); border-color: var(--deep); }
 .stepper div.done { color: var(--ink-2); border-color: var(--bronze); }
