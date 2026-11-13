@@ -172,7 +172,7 @@
   }
 
   /* ---------- booking ---------- */
-  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', receive: 'clinic', authMode: 'register', authEmail: '', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
+  const state = { step: 0, visit: 'first', dose: 2.5, pack: 'p4', receive: 'clinic', authMode: 'register', authEmail: '', verifyEmail: null, verifyName: '', extras: [], date: null, time: null, info: {}, screen: {}, agree: false, mix: '' };
   const STEP_NAMES = ['진료 선택', '날짜 · 시간', '회원 확인', '정보 · 사전 문진', '확인'];
 
   const load = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { return []; } };
@@ -335,6 +335,7 @@
       };
       return;
     }
+    if (state.verifyEmail) { stepVerify(); return; }
     const mode = state.authMode || 'register';
     el.innerHTML = `<h2>3. 회원 가입 · 로그인</h2><p class="desc">예약 내역 확인과 재방문을 위해 간단한 회원 가입이 필요합니다. 이메일 주소가 아이디가 됩니다.</p>
       <div class="choice-grid" id="mode" style="margin-bottom:22px">
@@ -364,12 +365,51 @@
           ? { name: $('#a-name').value.trim(), phone: $('#a-phone').value.trim(), email, password: pw }
           : { email, password: pw };
         const j = await apiCall('/account/' + mode, { method: 'POST', body: JSON.stringify(body) });
+        if (j.needVerify) { state.verifyEmail = j.email || email; state.verifyName = body.name || ''; state.codeSentAt = Date.now(); stepAuth(); return; }
         setAuth(j.token, j.account);
         state.info.name = state.info.name || j.account.name;
         state.info.phone = state.info.phone || j.account.phone;
         state.info.contact = j.account.email;
         stepAuth();
       } catch (e2) { err.textContent = e2.message; $('#go').disabled = false; }
+    };
+  }
+
+  /* 이메일 인증 번호 입력 */
+  function stepVerify() {
+    const el = $('#step'), email = state.verifyEmail;
+    el.innerHTML = `<h2>3. 이메일 인증</h2>
+      <p class="desc"><b>${esc(email)}</b>(으)로 6자리 인증 번호를 보냈습니다. 10분 안에 입력해 주세요. 메일이 보이지 않으면 스팸함도 확인해 주세요.</p>
+      <form id="vf" style="max-width:360px">
+        <label class="f">인증 번호<input id="v-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:22px;letter-spacing:.3em;text-align:center"></label>
+        <div id="v-err" class="err-msg"></div>
+        <button class="btn btn-primary btn-block" type="submit" id="v-go" style="margin-top:14px">인증하고 계속</button>
+      </form>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" id="v-resend">인증 번호 다시 받기</button>
+        <button class="btn btn-outline btn-sm" id="v-edit">이메일 주소 수정</button>
+      </div>
+      <div id="v-msg" class="muted" style="margin-top:10px"></div>`;
+    const codeInput = $('#v-code'); codeInput.focus();
+    codeInput.oninput = () => { codeInput.value = codeInput.value.replace(/\D/g, '').slice(0, 6); };
+    $('#v-edit').onclick = () => { state.verifyEmail = null; state.authMode = 'register'; stepAuth(); };
+    $('#v-resend').onclick = async () => {
+      const btn = $('#v-resend'); btn.disabled = true; $('#v-msg').textContent = '보내는 중…';
+      try { await apiCall('/account/resend', { method: 'POST', body: JSON.stringify({ email }) }); $('#v-msg').textContent = '인증 번호를 다시 보냈습니다.'; }
+      catch (e) { $('#v-msg').textContent = e.message; }
+      setTimeout(() => { btn.disabled = false; }, 60000);
+    };
+    $('#vf').onsubmit = async e => {
+      e.preventDefault(); $('#v-go').disabled = true; $('#v-err').textContent = '';
+      try {
+        const j = await apiCall('/account/verify', { method: 'POST', body: JSON.stringify({ email, code: codeInput.value }) });
+        setAuth(j.token, j.account);
+        state.verifyEmail = null;
+        state.info.name = state.info.name || j.account.name;
+        state.info.phone = state.info.phone || j.account.phone;
+        state.info.contact = j.account.email;
+        stepAuth();
+      } catch (e2) { $('#v-err').textContent = e2.message; $('#v-go').disabled = false; }
     };
   }
 
@@ -513,6 +553,7 @@
         e.preventDefault(); $('#l-go').disabled = true; $('#l-err').textContent = '';
         try {
           const j = await apiCall('/account/login', { method: 'POST', body: JSON.stringify({ email: $('#l-email').value.trim(), password: $('#l-pw').value }) });
+          if (j.needVerify) { $('#l-err').textContent = '이메일 인증이 끝나지 않았습니다. 받으신 인증 번호는 예약 화면에서 입력할 수 있습니다.'; $('#l-go').disabled = false; return; }
           setAuth(j.token, j.account); location.reload();
         } catch (e2) { $('#l-err').textContent = e2.message; $('#l-go').disabled = false; }
       };

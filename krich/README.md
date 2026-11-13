@@ -40,6 +40,12 @@
 - 예약은 `bookings.account_email`로 계정에 연결되어 `book.html?my=1`에서 기기와 상관없이 조회·취소할 수 있습니다
 - 회원 가입 전 예약 건은 예약번호 + 생년월일로 조회합니다
 
+### 이메일 인증
+- 가입 시 6자리 인증 번호를 메일로 보내고, 입력해야 로그인·예약이 됩니다. 10분 유효, 5회 오답 시 재발송 필요, 재발송은 60초 간격
+- 발송은 Resend API. 워커 시크릿 `RESEND_API_KEY`를 등록해야 켜집니다: `cd krich/worker && npx wrangler secret put RESEND_API_KEY`
+- 발신 주소는 `wrangler.toml`의 `MAIL_FROM`. 임의 수신자에게 보내려면 Resend에서 발신 도메인을 인증하고 그 도메인 주소로 바꿔야 합니다
+- **키를 등록하지 않으면 인증 단계를 건너뛰고 가입 즉시 이용**됩니다. 키가 없다고 사이트가 멈추지 않습니다
+
 ## 예약 저장·관리
 - 예약은 Cloudflare **D1** 데이터베이스 `krich-bookings`에 저장됩니다 (`worker/schema.sql`)
 - 같은 시간 중복 예약은 Durable Object `SlotRegistry`가 차단합니다 (KV와 달리 즉시 일관성)
