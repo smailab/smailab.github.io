@@ -108,21 +108,33 @@ ${faq}
   function mount() {
     const root = document.createElement('div');
     root.innerHTML = `
-      <button class="chat-fab" id="chat-fab" aria-label="AI 상담 열기"><span>AI 상담</span></button>
-      <div class="chat-panel" id="chat-panel" hidden>
+      <button class="chat-fab" id="chat-fab" aria-label="AI 상담 열기">
+        <span class="chat-fab-mark">AI</span><span class="chat-fab-label">상담</span>
+      </button>
+      <div class="chat-panel" id="chat-panel" role="dialog" aria-label="${esc(CHATBOT.title)}" hidden>
+        <div class="chat-grip" aria-hidden="true"></div>
         <div class="chat-head">
-          <div><b>${esc(CHATBOT.title)}</b><small>OpenAI 기반 · 의료 상담이 아닌 안내용</small></div>
-          <div class="chat-head-btns"><button id="chat-reset" title="대화 초기화" aria-label="대화 초기화">↺</button><button id="chat-close" aria-label="닫기">✕</button></div>
+          <div class="chat-title"><b>${esc(CHATBOT.title)}</b><small>마운자로 처방과 이 페이지의 내용을 안내합니다</small></div>
+          <div class="chat-head-btns">
+            <button id="chat-reset" title="대화 초기화" aria-label="대화 초기화">↺</button>
+            <button id="chat-close" title="닫기" aria-label="닫기">✕</button>
+          </div>
         </div>
         <div class="chat-body" id="chat-body"></div>
         <div class="chat-quick" id="chat-quick"></div>
-        <form class="chat-form" id="chat-form"><input id="chat-input" autocomplete="off" placeholder="궁금한 점을 입력하세요" maxlength="1000"><button class="btn btn-primary btn-sm" id="chat-send" type="submit">전송</button></form>
+        <form class="chat-form" id="chat-form"><input id="chat-input" autocomplete="off" placeholder="궁금한 점을 입력하세요" maxlength="1000"><button class="chat-send" id="chat-send" type="submit" aria-label="보내기">보내기</button></form>
         <div class="chat-foot">AI 답변은 참고용이며 처방 여부는 의사 진료 후 결정됩니다. 급한 문의는 <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a></div>
       </div>`;
     document.body.appendChild(root);
     const panel = $('#chat-panel'), body = $('#chat-body');
-    const open = () => { panel.hidden = false; $('#chat-fab').classList.add('open'); if (!body.children.length) renderAll(); setTimeout(() => $('#chat-input').focus(), 50); };
-    const close = () => { panel.hidden = true; $('#chat-fab').classList.remove('open'); };
+    const open = () => {
+      panel.hidden = false; $('#chat-fab').classList.add('open');
+      if (!body.children.length) renderAll();
+      requestAnimationFrame(() => panel.classList.add('in'));
+      setTimeout(() => $('#chat-input').focus(), 60);
+    };
+    const close = () => { panel.classList.remove('in'); panel.hidden = true; $('#chat-fab').classList.remove('open'); };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) close(); });
     $('#chat-fab').onclick = () => panel.hidden ? open() : close();
     $('#chat-close').onclick = close;
     $('#chat-reset').onclick = () => { history = []; saveHist(); renderAll(); };
@@ -149,7 +161,7 @@ ${faq}
     if (!configured()) { bubble('system', '아직 챗봇이 연결되지 않았습니다. 전화로 문의해 주세요. ' + esc(CLINIC.phone)); return; }
     history.push({ role: 'user', content: text }); saveHist();
     bubble('user', md(text));
-    const id = 'm' + Date.now(); const el = bubble('assistant', '<span class="chat-typing">…</span>', id);
+    const id = 'm' + Date.now(); const el = bubble('assistant', '<span class="chat-typing"><i></i><i></i><i></i></span>', id);
     $('#chat-send').disabled = true;
     const messages = [{ role: 'system', content: systemPrompt() }, ...history.slice(-2 * CHATBOT.maxTurns)];
     let full = '';
