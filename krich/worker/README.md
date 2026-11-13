@@ -1,4 +1,25 @@
-# 챗봇 프록시 배포 (Cloudflare Workers, 무료 플랜 가능)
+# 챗봇 프록시 (Cloudflare Workers)
+
+**배포 완료:** https://krich-chat.hyunsh99.workers.dev
+(`js/data.js`의 `CHATBOT.endpoint`에 연결되어 있습니다)
+
+## 남은 단계: OpenAI 키 등록
+워커가 OpenAI를 호출하려면 `OPENAI_API_KEY` 시크릿이 필요합니다. 둘 중 하나로 등록하세요.
+
+**A. 대시보드 (브라우저)**
+Cloudflare 대시보드 → Workers & Pages → `krich-chat` → Settings → Variables and Secrets
+→ Add → Type `Secret`, Name `OPENAI_API_KEY`, Value에 OpenAI 키 입력 → Deploy
+
+**B. 터미널**
+```bash
+cd krich/worker && npx wrangler secret put OPENAI_API_KEY
+```
+
+등록 후 사이트의 💬 AI 상담에서 바로 동작합니다. 워커 재배포는 필요 없습니다.
+
+---
+
+# 처음부터 배포하는 방법 (참고)
 
 사이트(GitHub Pages)는 정적이라 OpenAI API 키를 넣을 수 없습니다. 이 Worker가 키를 보관하고 OpenAI를 대신 호출합니다.
 
