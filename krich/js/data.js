@@ -38,6 +38,17 @@ const CLINIC = {
   maxPens: 12,                  // 한국 휴대 반입 한도(3개월분 12개)에 맞춘 1회 최대 처방
 };
 
+/* AI 챗봇 상담 (OpenAI) 설정
+ * endpoint: API 키를 숨겨주는 프록시 주소 (krich/worker/ 참고). 비어 있으면 관리자 테스트 모드만 동작 */
+const CHATBOT = {
+  endpoint: '',                    // 예: 'https://krich-chat.<계정>.workers.dev'
+  model: 'gpt-4o-mini',            // 프록시의 OPENAI_MODEL 환경변수가 우선
+  title: 'K-RICH AI 상담',
+  greeting: '안녕하세요! K-RICH CLINIC 마운자로 AI 상담입니다 🙂\n가격, 한국 반입 규정, 보관·부작용, 예약 방법 등 궁금한 점을 물어보세요.',
+  quick: ['2.5mg 가격이 얼마예요?', '한국에 몇 개까지 가져갈 수 있어요?', '부작용이 걱정돼요', '예약은 어떻게 하나요?'],
+  maxTurns: 12,
+};
+
 /* 환율 – 페이지 로드 시 실시간 환율(JPY→KRW)을 받아 갱신하고, 실패하면 아래 기준값을 사용 */
 const FX = {
   krwPerJpy: 8.5384,          // 기준값: 100엔 = 853.84원 (2026-11-06)

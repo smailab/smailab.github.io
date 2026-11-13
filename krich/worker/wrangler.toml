@@ -1,0 +1,11 @@
+name = "krich-chat"
+main = "openai-proxy.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+OPENAI_MODEL = "gpt-4o-mini"
+# 사이트 도메인만 허용 (로컬 테스트 시 http://localhost:8765 추가)
+ALLOWED_ORIGINS = "https://smailab.github.io"
+
+# OPENAI_API_KEY 는 여기에 적지 말고 시크릿으로 저장:
+#   npx wrangler secret put OPENAI_API_KEY

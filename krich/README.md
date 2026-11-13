@@ -19,6 +19,13 @@
 | `book.html?my=1` | 내 예약 확인·취소 (브라우저 localStorage) |
 | `book.html?pack=p8` | 패키지 미리 선택 (`p4`/`p8`/`p12`) |
 
+## AI 챗봇 상담 (OpenAI)
+- 우측 하단 💬 AI 상담 버튼(히어로·헤더·푸터·모바일 바에서도 열림). `js/chat.js`가 사이트 데이터(가격·FAQ·반입 가이드·문진 등)로 시스템 프롬프트를 만들어 OpenAI chat completions를 스트리밍 호출
+- **API 키는 사이트에 넣지 않습니다.** `worker/`의 Cloudflare Worker 프록시를 배포하고 `js/data.js`의 `CHATBOT.endpoint`에 주소를 넣으세요 (`worker/README.md` 참고)
+- 프록시 배포 전에는 챗봇 창 ⚙에서 관리자 테스트 키를 브라우저에만 저장해 테스트 가능
+- 모델 기본값 `gpt-4o-mini` (`CHATBOT.model`, 프록시의 `OPENAI_MODEL`), 대화는 sessionStorage에 유지, 최근 12턴만 전송
+- 챗봇 지침: 사이트 정보만 답변, 진단·처방 판단 금지, 응급 시 병원 안내, 가격은 엔+원화, 예약·전화 안내
+
 ## 원화 환산
 - 모든 엔화 가격 옆에 `(약 ○○원)`을 표시. 페이지 로드 시 실시간 환율(jsdelivr currency-api → open.er-api.com 순)을 받아 갱신하고, 실패하면 `FX.krwPerJpy` 기준값(100엔=853.84원, 2026-11-06) 사용. 100원 단위 반올림, 참고용 표기
 
@@ -43,6 +50,7 @@
 - 한국·일본 가격 비교: 주간경향(2026-09), 일본 온라인 클리닉 공식 가격표(2026-11), 2026-08-01 일본 약가 25% 인하
 - 규정·가격은 바뀔 수 있으므로 운영 시 주기적으로 갱신 필요
 - `js/app.js` – 공통 헤더/푸터, 랜딩 렌더링, 예약 단계 로직
+- `js/chat.js` – AI 상담 위젯 (OpenAI), `worker/openai-proxy.js` – API 키를 숨기는 Cloudflare Worker 프록시
 
 ## 운영 전 해야 할 일
 1. `js/data.js`의 `CLINIC`에서 카카오톡 채널 URL(`kakao`), 휴진일(`closedDates`), 점심시간(`lunch`) 확인·입력
