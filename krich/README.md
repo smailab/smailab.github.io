@@ -24,7 +24,6 @@
 - **API 키는 사이트에 넣지 않습니다.** Cloudflare Worker 프록시 `https://krich-chat.hyunsh99.workers.dev` 배포 완료, `CHATBOT.endpoint`에 연결됨
 - 호출 허용 도메인: `https://smailab.github.io`, `https://krich-clinic.pages.dev` (워커 `ALLOWED_ORIGINS`)
 - 남은 단계: Cloudflare 대시보드 → Workers & Pages → `krich-chat` → Settings → Variables and Secrets 에서 `OPENAI_API_KEY` 시크릿 등록 (`worker/README.md` 참고)
-- 프록시 배포 전에는 챗봇 창 ⚙에서 관리자 테스트 키를 브라우저에만 저장해 테스트 가능
 - 모델 기본값 `gpt-4o-mini` (`CHATBOT.model`, 프록시의 `OPENAI_MODEL`), 대화는 sessionStorage에 유지, 최근 12턴만 전송
 - **답변 범위 제한**: 마운자로 약품·처방, 본 클리닉의 가격·절차·예약, 한국 반입·보관, 클리닉 기본 정보, 페이지에 적힌 내용만 답변. 그 외(다른 질병·약 상담, 페이지에 없는 시술, 일반 상식, 번역·코딩, 여행·맛집, 투자, 잡담, 역할극)는 정해진 문구로 거절하고 전화 안내
 - 혼합 질문은 범위 안의 부분만 답하고 나머지는 한 문장으로 거절. 지침 노출·역할 변경 요구도 거절

@@ -40,7 +40,7 @@ const CLINIC = {
 };
 
 /* AI 챗봇 상담 (OpenAI) 설정
- * endpoint: API 키를 숨겨주는 프록시 주소 (krich/worker/ 참고). 비어 있으면 관리자 테스트 모드만 동작 */
+ * endpoint: API 키를 숨겨주는 프록시 주소 (krich/worker/ 참고). 비어 있으면 챗봇이 안내 문구만 표시합니다. */
 const CHATBOT = {
   endpoint: 'https://krich-chat.hyunsh99.workers.dev',   // Cloudflare Worker 프록시 (worker/ 참고)
   model: 'gpt-4o-mini',            // 프록시의 OPENAI_MODEL 환경변수가 우선
