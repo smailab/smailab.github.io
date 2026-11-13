@@ -1,11 +1,10 @@
 /* K-RICH CLINIC – AI 상담 챗봇 (OpenAI chat completions)
- * - CHATBOT.endpoint 가 설정되면 프록시(worker/)를 통해 호출 (API 키는 서버에만 존재)
- * - 설정 전에는 관리자 테스트 모드: 브라우저 localStorage에 키를 저장해 api.openai.com 직접 호출 (본인 브라우저에서만 동작) */
+ * CHATBOT.endpoint(Cloudflare Worker 프록시)를 통해서만 호출합니다. API 키는 서버에만 존재합니다. */
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
-  const KEY_STORE = 'krich_openai_key', HIST = 'krich_chat_history';
+  const HIST = 'krich_chat_history';
 
   /* ---------- 지식: 사이트 데이터로 시스템 프롬프트 생성 ---------- */
   function systemPrompt() {
@@ -104,8 +103,7 @@ ${faq}
   /* ---------- UI ---------- */
   let history = []; try { history = JSON.parse(sessionStorage.getItem(HIST) || '[]'); } catch {}
   const saveHist = () => { try { sessionStorage.setItem(HIST, JSON.stringify(history.slice(-2 * CHATBOT.maxTurns))); } catch {} };
-  const adminKey = () => { try { return localStorage.getItem(KEY_STORE) || ''; } catch { return ''; } };
-  const configured = () => !!CHATBOT.endpoint || !!adminKey();
+  const configured = () => !!CHATBOT.endpoint;
 
   function mount() {
     const root = document.createElement('div');
@@ -114,7 +112,7 @@ ${faq}
       <div class="chat-panel" id="chat-panel" hidden>
         <div class="chat-head">
           <div><b>${esc(CHATBOT.title)}</b><small>OpenAI 기반 · 의료 상담이 아닌 안내용</small></div>
-          <div class="chat-head-btns"><button id="chat-reset" title="대화 초기화">↺</button><button id="chat-admin" title="관리자 설정">⚙</button><button id="chat-close" aria-label="닫기">✕</button></div>
+          <div class="chat-head-btns"><button id="chat-reset" title="대화 초기화" aria-label="대화 초기화">↺</button><button id="chat-close" aria-label="닫기">✕</button></div>
         </div>
         <div class="chat-body" id="chat-body"></div>
         <div class="chat-quick" id="chat-quick"></div>
@@ -128,7 +126,6 @@ ${faq}
     $('#chat-fab').onclick = () => panel.hidden ? open() : close();
     $('#chat-close').onclick = close;
     $('#chat-reset').onclick = () => { history = []; saveHist(); renderAll(); };
-    $('#chat-admin').onclick = adminDialog;
     document.querySelectorAll('[data-open-chat]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); open(); }));
     $('#chat-form').onsubmit = e => { e.preventDefault(); const v = $('#chat-input').value.trim(); if (v) { $('#chat-input').value = ''; send(v); } };
     $('#chat-quick').innerHTML = CHATBOT.quick.map(q => `<button type="button">${esc(q)}</button>`).join('');
@@ -143,17 +140,8 @@ ${faq}
   function renderAll() {
     const body = $('#chat-body'); body.innerHTML = '';
     bubble('assistant', md(CHATBOT.greeting));
-    if (!configured()) bubble('system', 'AI 상담은 준비 중입니다. 지금은 전화(' + esc(CLINIC.phone) + ')로 문의해 주세요.<br><small>관리자: ⚙에서 테스트 키 입력 또는 <code>worker/</code> 프록시 배포 후 <code>CHATBOT.endpoint</code> 설정</small>');
+    if (!configured()) bubble('system', 'AI 상담은 준비 중입니다. 지금은 전화(' + esc(CLINIC.phone) + ')로 문의해 주세요.');
     history.forEach(m => bubble(m.role, md(m.content)));
-  }
-
-  function adminDialog() {
-    const cur = adminKey();
-    const v = prompt('관리자 테스트 모드\n\nOpenAI API 키를 이 브라우저(localStorage)에만 저장해 챗봇을 테스트합니다. 공개 운영에는 반드시 프록시(krich/worker)를 사용하세요.\n\n비우고 확인하면 저장된 키를 삭제합니다.', cur ? '(저장됨 – 바꾸려면 새 키 입력)' : '');
-    if (v === null) return;
-    const val = v.trim();
-    try { if (!val || val.startsWith('(저장됨')) { if (!val) localStorage.removeItem(KEY_STORE); } else localStorage.setItem(KEY_STORE, val); } catch {}
-    renderAll();
   }
 
   /* ---------- OpenAI 호출 (스트리밍) ---------- */
@@ -166,11 +154,8 @@ ${faq}
     const messages = [{ role: 'system', content: systemPrompt() }, ...history.slice(-2 * CHATBOT.maxTurns)];
     let full = '';
     try {
-      const url = CHATBOT.endpoint ? CHATBOT.endpoint.replace(/\/$/, '') + '/chat' : 'https://api.openai.com/v1/chat/completions';
-      const headers = { 'Content-Type': 'application/json' };
-      const payload = { messages, stream: true };
-      if (!CHATBOT.endpoint) { headers.Authorization = 'Bearer ' + adminKey(); Object.assign(payload, { model: CHATBOT.model, temperature: 0.3, max_tokens: 700 }); }
-      const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const url = CHATBOT.endpoint.replace(/\/$/, '') + '/chat';
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, stream: true }) });
       if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error(`HTTP ${r.status} ${t.slice(0, 200)}`); }
       const ct = r.headers.get('content-type') || '';
       if (ct.includes('text/event-stream')) {

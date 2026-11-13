@@ -64,6 +64,3 @@ const CHATBOT = { endpoint: 'https://krich-chat.<계정>.workers.dev', ... };
 - OpenAI 대시보드에서 월 사용 한도(Usage limits)를 꼭 설정하세요.
 - Worker는 메시지 수·길이를 제한합니다. 트래픽이 많아지면 Cloudflare **Rate Limiting** 규칙(예: IP당 분당 20회)을 추가하세요.
 - Vercel/Netlify 함수로 옮겨도 됩니다. `openai-proxy.js`의 로직을 그대로 쓰면 됩니다.
-
-## 관리자 테스트 모드 (프록시 배포 전)
-사이트 챗봇 창 우측 상단 ⚙ → API 키 입력. 키는 **그 브라우저의 localStorage에만** 저장되고 api.openai.com을 직접 호출합니다. 본인 테스트용이며, 방문자에게는 적용되지 않습니다.
