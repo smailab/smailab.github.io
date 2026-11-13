@@ -68,7 +68,7 @@
           <div>
             <a class="logo" href="index.html"><img src="brand/logo.svg" alt="K-RICH Clinic" class="logo-img inv"><small>FUKUOKA · 福岡</small></a>
             <p style="margin:14px 0 6px">${esc(CLINIC.nameJa)} · ${esc(CLINIC.dept)}<br>${esc(CLINIC.address)}</p>
-            <p style="margin:0">TEL <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>${CLINIC.email ? ' · ' + esc(CLINIC.email) : ''}</p>
+            <p style="margin:0">TEL <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>${CLINIC.phoneLocal ? ` (일본 내 ${esc(CLINIC.phoneLocal)})` : ''}${CLINIC.email ? ' · ' + esc(CLINIC.email) : ''}</p>
           </div>
           <div>
             <h4>진료시간</h4>
@@ -142,7 +142,7 @@
       ['주소', `${esc(CLINIC.addressKo)}<br><span class="muted">${esc(CLINIC.address)}</span>`],
       ['진료시간', CLINIC.hours.map(h => `${esc(h.day)} ${esc(h.time)}`).join('<br>')],
       ['진료과목', esc(CLINIC.dept)],
-      ['전화', `<a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`],
+      ['전화', `<a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>${CLINIC.phoneLocal ? ` <span class="muted">(일본 내 ${esc(CLINIC.phoneLocal)})</span>` : ''}`],
       ['예약·상담', `<a href="book.html">온라인 예약</a> · <a href="#chat" data-open-chat>AI 상담</a> · <a href="tel:${CLINIC.phoneIntl}">전화</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.line ? ` · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>` : ''}${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
       ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a> · <a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram</a>`],
       ['결제', '엔화 현금 · VISA/Master/JCB/AMEX (간편결제는 예약 시 확인)'],
