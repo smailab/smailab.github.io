@@ -60,7 +60,7 @@
 [클리닉 정보]
 - 이름: ${CLINIC.nameJa} (${CLINIC.nameKo}), 진료과목: ${CLINIC.dept}
 - 주소: ${CLINIC.addressKo} / ${CLINIC.address}
-- 전화: ${CLINIC.phone}, 접수 시간: ${CLINIC.hours.map(h => h.day + ' ' + h.time).join(', ')}
+- 전화: ${CLINIC.phone} (한국에서 걸 때. 일본 국내에서는 ${CLINIC.phoneLocal}), 접수 시간: ${CLINIC.hours.map(h => h.day + ' ' + h.time).join(', ')}
 - 공식 사이트: ${CLINIC.site}, 공식 WEB 예약(일본어): ${CLINIC.webReserve}
 - 원장: ${doc.name} – ${doc.role}. ${doc.bio}
 - 결제: 엔화 현금, 한국 발급 신용·체크카드(VISA/Master/JCB/AMEX). 간편결제는 전화로 확인.
