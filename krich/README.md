@@ -21,7 +21,8 @@
 
 ## AI 챗봇 상담 (OpenAI)
 - 우측 하단 💬 AI 상담 버튼(히어로·헤더·푸터·모바일 바에서도 열림). `js/chat.js`가 사이트 데이터(가격·FAQ·반입 가이드·문진 등)로 시스템 프롬프트를 만들어 OpenAI chat completions를 스트리밍 호출
-- **API 키는 사이트에 넣지 않습니다.** `worker/`의 Cloudflare Worker 프록시를 배포하고 `js/data.js`의 `CHATBOT.endpoint`에 주소를 넣으세요 (`worker/README.md` 참고)
+- **API 키는 사이트에 넣지 않습니다.** Cloudflare Worker 프록시 `https://krich-chat.hyunsh99.workers.dev` 배포 완료, `CHATBOT.endpoint`에 연결됨
+- 남은 단계: Cloudflare 대시보드 → Workers & Pages → `krich-chat` → Settings → Variables and Secrets 에서 `OPENAI_API_KEY` 시크릿 등록 (`worker/README.md` 참고)
 - 프록시 배포 전에는 챗봇 창 ⚙에서 관리자 테스트 키를 브라우저에만 저장해 테스트 가능
 - 모델 기본값 `gpt-4o-mini` (`CHATBOT.model`, 프록시의 `OPENAI_MODEL`), 대화는 sessionStorage에 유지, 최근 12턴만 전송
 - 챗봇 지침: 사이트 정보만 답변, 진단·처방 판단 금지, 응급 시 병원 안내, 가격은 엔+원화, 예약·전화 안내

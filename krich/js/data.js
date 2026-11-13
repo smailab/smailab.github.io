@@ -41,7 +41,7 @@ const CLINIC = {
 /* AI 챗봇 상담 (OpenAI) 설정
  * endpoint: API 키를 숨겨주는 프록시 주소 (krich/worker/ 참고). 비어 있으면 관리자 테스트 모드만 동작 */
 const CHATBOT = {
-  endpoint: '',                    // 예: 'https://krich-chat.<계정>.workers.dev'
+  endpoint: 'https://krich-chat.hyunsh99.workers.dev',   // Cloudflare Worker 프록시 (worker/ 참고)
   model: 'gpt-4o-mini',            // 프록시의 OPENAI_MODEL 환경변수가 우선
   title: 'K-RICH AI 상담',
   greeting: '안녕하세요! K-RICH CLINIC 마운자로 AI 상담입니다 🙂\n가격, 한국 반입 규정, 보관·부작용, 예약 방법 등 궁금한 점을 물어보세요.',
