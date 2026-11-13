@@ -19,7 +19,9 @@
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STORE_KEY = 'krich_bookings';
-  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' };
+  /* 채팅 상담 링크: 카카오톡 또는 LINE URL이 있을 때만 버튼 표시 */
+  const CHAT = CLINIC.kakao ? { url: CLINIC.kakao, label: '카카오톡 상담', cls: 'btn-kakao', icon: '💬' } : CLINIC.line ? { url: CLINIC.line, label: 'LINE 상담', cls: 'btn-line', icon: '💬' } : null;
+  const chatBtn = (extra = '') => CHAT ? `<a class="btn ${CHAT.cls} ${extra}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>` : `<a class="btn btn-outline ${extra}" href="tel:${CLINIC.phoneIntl}">📞 전화 예약</a>`;
 
   /* ---------- header / footer ---------- */
   function header() {
@@ -38,7 +40,7 @@
             <a href="book.html?my=1">예약 확인</a>
           </nav>
           <div class="header-cta">
-            <a class="btn ${CHAT.cls} btn-sm" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>
+            ${chatBtn('btn-sm')}
             <a class="btn btn-primary btn-sm" href="book.html">온라인 예약</a>
           </div>
           <button class="menu-btn" id="menu-btn" aria-label="메뉴">☰</button>
@@ -54,8 +56,8 @@
       </header>`;
     $('#menu-btn').addEventListener('click', () => $('#mobile-nav').classList.toggle('open'));
     document.querySelectorAll('#mobile-nav a').forEach(a => a.addEventListener('click', () => $('#mobile-nav').classList.remove('open')));
-    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
-    document.querySelectorAll('#tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
+    document.querySelectorAll('#kakao-hero, #kakao-cta').forEach(a => { if (!CHAT) { a.remove(); return; } a.href = CHAT.url; a.textContent = (a.id === 'kakao-hero' ? CHAT.icon + ' ' : '') + CHAT.label + (a.id === 'kakao-cta' ? '으로 문의' : ''); if (a.id === 'kakao-hero') { a.classList.remove('btn-kakao'); a.classList.add(CHAT.cls); } });
+    document.querySelectorAll('.tel-link').forEach(a => { a.href = 'tel:' + CLINIC.phoneIntl; a.textContent = '📞 ' + CLINIC.phone; });
   }
 
   function footer() {
@@ -75,7 +77,7 @@
           <div>
             <h4>상담 · 예약</h4>
             <ul>
-              <li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>
+              ${CLINIC.line ? `<li><a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a></li>` : ''}
               ${CLINIC.kakao ? `<li><a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡 채널</a></li>` : ''}
               <li><a href="tel:${CLINIC.phoneIntl}">전화 예약 ${esc(CLINIC.phone)}</a></li>
               <li><a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약 (일본어)</a></li>
@@ -92,7 +94,7 @@
         </div>
       </footer>
       <div class="sticky-cta">
-        <a class="btn ${CHAT.cls}" href="${CHAT.url}" target="_blank" rel="noopener">${CHAT.icon} ${CHAT.label}</a>
+        ${chatBtn()}
         <a class="btn btn-primary" href="book.html">온라인 예약</a>
       </div>`;
   }
@@ -115,7 +117,7 @@
         <h3>2.5mg ${esc(pk.label)}</h3>
         <div class="price">${yen(total)} <small>세금 포함</small><span class="krw" data-jpy="${total}">(${krw(total)})</span></div>
         ${pk.discount ? `<div class="save">${Math.round(pk.discount * 100)}% 할인 · ${yen(base - total)} 절약</div>` : `<div class="save" style="color:var(--ink-3)">${pk.pens === 4 ? '기본 구성' : '4개 세트 × ' + (pk.pens / 4)}</div>`}
-        <ul><li>원장 한국어 직접 진료</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.pens >= 8 ? '<li>보냉 가방 + 아이스팩 증정</li>' : ''}${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
+        <ul><li>원장 한국어 직접 진료</li><li>원내 첫 주사 + 자가주사 교육</li><li>영문 처방전·약제 증명서</li>${pk.note ? `<li><b>${esc(pk.note)}</b></li>` : ''}</ul>
         <a class="btn ${i === 2 ? 'btn-primary' : 'btn-outline'} btn-block" href="book.html?pack=${pk.id}">이 구성으로 예약</a></div>`;
     }).join('');
 
@@ -140,7 +142,7 @@
       ['진료시간', CLINIC.hours.map(h => `${esc(h.day)} ${esc(h.time)}`).join('<br>')],
       ['진료과목', esc(CLINIC.dept)],
       ['전화', `<a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a>`],
-      ['예약·상담', `<a href="${CLINIC.line}" target="_blank" rel="noopener">LINE 공식계정</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
+      ['예약·상담', `<a href="book.html">온라인 예약</a> · <a href="tel:${CLINIC.phoneIntl}">전화</a> · <a href="${CLINIC.webReserve}" target="_blank" rel="noopener">공식 WEB 예약</a>${CLINIC.line ? ` · <a href="${CLINIC.line}" target="_blank" rel="noopener">LINE</a>` : ''}${CLINIC.kakao ? ` · <a href="${CLINIC.kakao}" target="_blank" rel="noopener">카카오톡</a>` : ''}`],
       ['공식 사이트', `<a href="${CLINIC.site}" target="_blank" rel="noopener">k-rich.jp</a> · <a href="${CLINIC.instagram}" target="_blank" rel="noopener">Instagram</a>`],
       ['결제', '엔화 현금 · VISA/Master/JCB/AMEX (간편결제는 예약 시 확인)'],
     ].map(([k, v]) => `<li><b>${k}</b><span>${v}</span></li>`).join('');
@@ -209,14 +211,12 @@
       <h3 style="margin:22px 0 10px">용량</h3>
       <div class="choice-grid" id="dose">${PRICES.pens.map(p => `<button class="choice ${state.dose === p.dose ? 'selected' : ''}" data-d="${p.dose}" ${state.visit === 'first' && p.dose !== 2.5 ? 'disabled' : ''}><b>${p.dose}mg</b><span>${esc(p.weeks)}</span><span class="p">${yen(p.set4)} / 4개 <span class="krw" data-jpy="${p.set4}">(${krw(p.set4)})</span></span></button>`).join('')}</div>
       <h3 style="margin:22px 0 10px">수량</h3>
-      <div class="choice-grid" id="pack">${PRICES.packs.map(pk => `<button class="choice ${state.pack === pk.id ? 'selected' : ''}" data-p="${pk.id}"><b>${esc(pk.label)}</b><span>${pk.discount ? `${Math.round(pk.discount * 100)}% 할인` : '기본'}${pk.pens >= 8 ? ' · 보냉 가방 증정' : ''}${pk.note ? ' · ' + esc(pk.note) : ''}</span></button>`).join('')}</div>
+      <div class="choice-grid" id="pack">${PRICES.packs.map(pk => `<button class="choice ${state.pack === pk.id ? 'selected' : ''}" data-p="${pk.id}"><b>${esc(pk.label)}</b><span>${pk.discount ? `${Math.round(pk.discount * 100)}% 할인` : pk.pens === 4 ? '기본' : '4개 세트 × ' + (pk.pens / 4)}${pk.note ? ' · ' + esc(pk.note) : ''}</span></button>`).join('')}</div>
       <p class="muted" style="margin:10px 0 0">일본에서 맞을 양 + 한국에 가져갈 양을 합쳐 최대 12개(3개월분)까지 처방합니다. 초진은 2.5mg 4개 + 5mg 8개처럼 증량 구성으로 드립니다.</p>
-      <h3 style="margin:22px 0 10px">수령 방법</h3>
-      <div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yk(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>
-      ${state.receive === 'hotel' ? '<div class="notice" style="margin-top:10px">호텔 배송은 온라인 진료(LINE 영상) 후 1~3영업일에 도착합니다. 체크아웃 직전 수령은 피하고, 호텔에 냉장 택배가 온다고 미리 알려주세요. 해외 배송은 불가합니다.</div>' : ''}
+      ${RECEIVE.length > 1 ? `<h3 style="margin:22px 0 10px">수령 방법</h3><div class="choice-grid" id="receive">${RECEIVE.map(r => `<button class="choice ${state.receive === r.id ? 'selected' : ''}" data-r="${r.id}"><b>${esc(r.title)} <span class="tag-sm">${esc(r.tag)}</span></b><span>${esc(r.desc)}</span><span class="p">${r.price ? '배송비 ' + yk(r.price) : '추가 비용 없음'}</span></button>`).join('')}</div>` : ''}
       <h3 style="margin:22px 0 10px">추가 옵션</h3>
       <div class="grid" style="gap:8px">${PRICES.extras.map(e => `<label class="check"><input type="checkbox" data-e="${e.id}" ${state.extras.includes(e.id) ? 'checked' : ''}><span><b>${esc(e.name)}</b> &nbsp;<span style="color:var(--green);font-weight:700">${e.price ? yk(e.price) : '무료'}</span>${e.note ? `<br><span class="muted">${esc(e.note)}</span>` : ''}</span></label>`).join('')}</div>
-      <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4개 + 5mg 8개로 받고 싶어요 / 혈액검사 원해요">${esc(state.mix)}</textarea></label>
+      <label class="f" style="margin-top:18px">희망 구성 메모 (선택)<textarea id="mix" rows="2" placeholder="예) 2.5mg 4개 + 5mg 8개로 받고 싶어요">${esc(state.mix)}</textarea></label>
       <div class="actions"><span></span><button class="btn btn-primary" id="next">날짜 선택 →</button></div>`;
     el.querySelectorAll('#visit .choice').forEach(b => b.onclick = () => { state.visit = b.dataset.v; if (state.visit === 'first') state.dose = 2.5; step1(); summary(); });
     el.querySelectorAll('#dose .choice').forEach(b => b.onclick = () => { if (b.disabled) return; state.dose = +b.dataset.d; step1(); summary(); });
@@ -263,7 +263,7 @@
     }
     const prevOk = new Date(y, m, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
     const nextOk = new Date(y, m + 1, 1) <= maxD;
-    el.innerHTML = `<h2>2. ${state.receive === 'hotel' ? '온라인 진료' : '내원'} 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 접수 10:00~19:00, 휴진은 비정기이므로 확정 안내 시 함께 알려드립니다. 당일 예약은 LINE 또는 전화로 문의해 주세요.${state.receive === 'hotel' ? ' 호텔 배송은 진료일로부터 1~3영업일 뒤 도착하므로 체크아웃 4일 전까지 진료를 잡아주세요.' : ''}</p>
+    el.innerHTML = `<h2>2. 내원 날짜 · 시간 선택</h2><p class="desc">한국 시간 기준으로 예약 가능합니다 (일본과 시차 없음). 접수 10:00~19:00, 휴진은 비정기이므로 확정 안내 시 함께 알려드립니다. 당일 예약은 전화(${esc(CLINIC.phone)})로 문의해 주세요.${state.receive === 'hotel' ? '' : ''}</p>
       <div class="cal-nav"><button id="prev" ${prevOk ? '' : 'disabled'}>‹</button><b>${y}년 ${m + 1}월</b><button id="next-m" ${nextOk ? '' : 'disabled'}>›</button></div>
       <div class="cal">${cells}</div>
       <div id="slots-wrap">${state.date ? slotsHtml() : '<p class="muted" style="margin-top:16px">날짜를 선택하면 가능한 시간이 표시됩니다.</p>'}</div>
@@ -290,12 +290,12 @@
         <label class="f">생년월일 *<input id="birth" type="date" value="${esc(i.birth || '')}" max="${key(new Date())}"></label>
         <label class="f">성별<select id="sex"><option value="">선택</option><option ${i.sex === 'F' ? 'selected' : ''} value="F">여성</option><option ${i.sex === 'M' ? 'selected' : ''} value="M">남성</option></select></label>
         <label class="f">휴대폰 (한국) *<input id="phone" value="${esc(i.phone || '')}" placeholder="010-0000-0000" inputmode="tel"></label>
-        <label class="f">LINE ID · 카카오톡 ID 또는 이메일 *<input id="contact" value="${esc(i.contact || '')}" placeholder="예약 확정을 보내드립니다"></label>
+        <label class="f">카카오톡 ID 또는 이메일 *<input id="contact" value="${esc(i.contact || '')}" placeholder="예약 확정을 보내드립니다"></label>
         <label class="f">키 (cm) *<input id="height" type="number" value="${esc(i.height || '')}" placeholder="165" inputmode="decimal"></label>
         <label class="f">몸무게 (kg) *<input id="weight" type="number" value="${esc(i.weight || '')}" placeholder="70" inputmode="decimal"></label>
         <div class="full bmi-box"><span>BMI <span class="muted">(자동 계산 · 보통 23 이상 처방 대상)</span></span><b id="bmi">-</b></div>
         <label class="f full">복용 중인 약 · 기저질환 (선택)<textarea id="meds" rows="2" placeholder="예) 고혈압약 복용 중 / 갑상선 기능 저하">${esc(i.meds || '')}</textarea></label>
-        <label class="f full">일본 체류 기간 · 숙소 ${state.receive === 'hotel' ? '*' : '(선택)'}<input id="stay" value="${esc(i.stay || '')}" placeholder="예) 11/20 ~ 11/23, 하카타 ○○호텔 (호텔 배송 시 호텔명·주소·예약자명)"></label>
+        <label class="f full">일본 체류 기간 · 숙소 (선택)<input id="stay" value="${esc(i.stay || '')}" placeholder="예) 11/20 ~ 11/23, 텐진 ○○호텔"></label>
         <label class="f">숙소 냉장고<select id="fridge"><option value="">모름</option><option ${i.fridge === 'yes' ? 'selected' : ''} value="yes">있음</option><option ${i.fridge === 'no' ? 'selected' : ''} value="no">없음 (상온 21일 이내 사용)</option></select></label>
         <label class="f">이미 사용 중이라면 현재 용량·마지막 투여일<input id="prior" value="${esc(i.prior || '')}" placeholder="예) 5mg 3주째, 마지막 11/8"></label>
       </div>
@@ -316,7 +316,7 @@
     $('#back').onclick = () => { collect(); state.step = 1; render(); };
     $('#next').onclick = () => {
       collect();
-      const req = ['name', 'ename', 'birth', 'phone', 'contact', 'height', 'weight', ...(state.receive === 'hotel' ? ['stay'] : [])];
+      const req = ['name', 'ename', 'birth', 'phone', 'contact', 'height', 'weight'];
       let ok = true;
       req.forEach(id => { const f = $('#' + id); const bad = !f.value.trim(); f.classList.toggle('err', bad); if (bad) ok = false; });
       if (!ok) { el.querySelector('.err').focus(); return; }
@@ -331,7 +331,7 @@
     const p = price(), i = state.info, el = $('#step');
     const h = +i.height / 100, bmi = h ? (+i.weight / (h * h)).toFixed(1) : '-';
     const screens = SCREENING.filter(s => state.screen[s.id]).map(s => s.label);
-    el.innerHTML = `<h2>4. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 스태프가 확인 후 LINE(또는 입력하신 연락처)으로 확정 안내를 드립니다.</p>
+    el.innerHTML = `<h2>4. 예약 내용 확인</h2><p class="desc">아래 내용이 맞는지 확인 후 "예약 요청"을 눌러주세요. 담당 스태프가 확인 후 입력하신 연락처로 확정 안내를 드립니다.</p>
       <div class="confirm"><dl>
         <div><dt>일시</dt><dd>${fmtDate(state.date)} ${state.time}</dd></div>
         <div><dt>구분</dt><dd>${state.visit === 'first' ? '초진' : '재진'} · 마운자로 ${p.pen.dose}mg · ${esc(p.pk.label)}</dd></div>
@@ -348,7 +348,7 @@
         ${screens.length ? `<div><dt>문진 해당</dt><dd style="color:var(--red)">${screens.map(esc).join('<br>')}</dd></div>` : '<div><dt>문진</dt><dd>해당 사항 없음</dd></div>'}
         <div><dt>예상 금액</dt><dd style="color:var(--green);font-weight:900">${yk(p.total)} <span class="muted">· 원내 결제</span></dd></div>
       </dl></div>
-      <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 LINE·전화로 꼭 취소해 주세요.</div>
+      <div class="notice">예약금은 없습니다. 방문이 어려워지면 예약 확인 페이지 또는 전화로 꼭 취소해 주세요.</div>
       <div class="actions"><button class="btn btn-outline" id="back">← 수정</button><button class="btn btn-primary" id="submit">예약 요청하기</button></div>`;
     $('#back').onclick = () => { state.step = 2; render(); };
     $('#submit').onclick = () => {
@@ -370,16 +370,16 @@
       <div class="code">${r.code}</div>
       <dl><div><dt>일시</dt><dd>${fmtDate(r.date)} ${r.time}</dd></div><div><dt>처방</dt><dd>마운자로 ${r.dose}mg · ${esc(r.pack)}</dd></div><div><dt>수령</dt><dd>${esc(r.receive || '내원 수령')}</dd></div><div><dt>예상 금액</dt><dd>${yk(r.total)}</dd></div><div><dt>준비물</dt><dd>여권 · 복용약 사진</dd></div></dl>
       <div class="hero-cta" style="justify-content:center">
-        <button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>
+        ${CHAT ? `<button class="btn ${CHAT.cls}" id="copy">예약 내용 복사 후 ${CHAT.label.replace(' 상담', '')} 열기</button>` : `<button class="btn btn-primary" id="copy">예약 내용 복사</button><a class="btn btn-outline" href="tel:${CLINIC.phoneIntl}">📞 ${esc(CLINIC.phone)}</a>`}
         <a class="btn btn-outline" href="book.html?my=1">내 예약 확인</a>
       </div>
-      <p class="muted" style="margin-top:14px">${CHAT.label.replace(' 상담', '')} 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다. 전화: <a href="tel:${CLINIC.phoneIntl}">${esc(CLINIC.phone)}</a></p></div>`;
-    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); } catch {} window.open(CHAT.url, '_blank'); };
+      <p class="muted" style="margin-top:14px">${CHAT ? CHAT.label.replace(' 상담', '') + ' 공식계정에 복사한 내용을 붙여넣어 보내시면 더 빨리 확정됩니다.' : '급하시면 접수 시간 내 전화로 예약번호를 말씀해 주시면 바로 확인해 드립니다.'}</p></div>`;
+    $('#copy').onclick = async () => { try { await navigator.clipboard.writeText(kakaoText(r)); $('#copy').textContent = '복사됨 ✓'; } catch {} if (CHAT) window.open(CHAT.url, '_blank'); };
   }
 
   function renderMy() {
     $('#stepper').style.display = 'none';
-    $('#summary').innerHTML = `<h3>안내</h3><p style="font-size:14px;color:var(--ink-2);margin:0">예약 내역은 이 브라우저에만 저장됩니다. 다른 기기에서 확인하시려면 예약번호로 LINE 또는 전화로 문의해 주세요.</p><a class="btn btn-primary btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
+    $('#summary').innerHTML = `<h3>안내</h3><p style="font-size:14px;color:var(--ink-2);margin:0">예약 내역은 이 브라우저에만 저장됩니다. 다른 기기에서 확인하시려면 예약번호로 전화 문의해 주세요.</p><a class="btn btn-primary btn-block" href="book.html" style="margin-top:14px">새 예약</a>`;
     const list = load();
     $('#step').innerHTML = `<h2>내 예약</h2><p class="desc">예약 요청·확정 내역을 확인하고 취소할 수 있습니다.</p>` +
       (list.length ? `<div class="my-list">${list.map(r => `<div class="my-item"><div><b>${fmtDate(r.date)} ${r.time}</b>마운자로 ${r.dose}mg · ${esc(r.pack)} · ${esc(r.info.name)}<br><span class="muted">예약번호 ${r.code}</span></div><div style="text-align:right"><span class="st ${r.status === 'cancel' ? 'cancel' : ''}">${r.status === 'cancel' ? '취소됨' : '확정 대기'}</span><br>${r.status !== 'cancel' ? `<button class="btn btn-outline btn-sm" data-c="${r.code}" style="margin-top:8px">취소</button>` : ''}</div></div>`).join('')}</div>` : '<p class="muted">저장된 예약이 없습니다.</p>');
