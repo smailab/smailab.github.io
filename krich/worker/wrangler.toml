@@ -7,10 +7,11 @@ OPENAI_MODEL = "gpt-4o-mini"
 # 사이트 도메인만 허용, 쉼표 구분 (로컬 테스트 시 http://localhost:8765 추가)
 ALLOWED_ORIGINS = "https://smailab.github.io,https://krich-clinic.pages.dev"
 
-# 예약 저장소 (Workers KV)
-[[kv_namespaces]]
-binding = "BOOKINGS"
-id = "04ad1ba70196405aa20fef3ca39b9a55"
+# 예약 저장소 (D1)
+[[d1_databases]]
+binding = "DB"
+database_name = "krich-bookings"
+database_id = "7c7b6f3d-04de-47e6-977c-0c36cce9c141"
 
 # 시크릿은 여기에 적지 말고 아래 명령으로 저장:
 #   npx wrangler secret put OPENAI_API_KEY

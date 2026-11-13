@@ -93,8 +93,7 @@
   function render() {
     const rows = state.rows;
     const by = s => rows.filter(r => r.status === s).length;
-    $('#sum').innerHTML = `<b>${rows.length}건</b> · 확정 대기 ${by('pending')} · 확정 ${by('confirmed')} · 완료 ${by('done')} · 취소 ${by('cancelled')} · 노쇼 ${by('noshow')}
-      <span class="muted" style="margin-left:8px">상세 화면의 상태가 정확합니다. 다른 기기에서 바꾼 상태는 목록에 최대 1분 뒤 반영됩니다.</span>`;
+    $('#sum').innerHTML = `<b>${rows.length}건</b> · 확정 대기 ${by('pending')} · 확정 ${by('confirmed')} · 완료 ${by('done')} · 취소 ${by('cancelled')} · 노쇼 ${by('noshow')}`;
     if (!rows.length) { $('#rows').innerHTML = '<p class="muted">해당 기간에 예약이 없습니다.</p>'; return; }
     const slotCount = {};
     rows.filter(r => r.status !== 'cancelled').forEach(r => { const k = r.date + r.time; slotCount[k] = (slotCount[k] || 0) + 1; });
