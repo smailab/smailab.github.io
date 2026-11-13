@@ -38,28 +38,40 @@ const CLINIC = {
   maxPens: 12,                  // 한국 휴대 반입 한도(3개월분 12개)에 맞춘 1회 최대 처방
 };
 
-/* 가격 (엔, 세금 포함) – ※ 마운자로 가격은 공식 사이트(k-rich.jp/price)에 게재되어 있지 않아 샘플입니다.
- * 일본 온라인 클리닉 2.5mg 4개 기준 12,000~17,000엔대(2026-11)를 참고해 설정. 실제 가격으로 교체 필요 */
+/* 환율 – 페이지 로드 시 실시간 환율(JPY→KRW)을 받아 갱신하고, 실패하면 아래 기준값을 사용 */
+const FX = {
+  krwPerJpy: 8.5384,          // 기준값: 100엔 = 853.84원 (2026-11-06)
+  asOf: '2026-11-06',
+  live: false,
+  sources: [
+    { url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.min.json', pick: j => j.jpy && j.jpy.krw, date: j => j.date },
+    { url: 'https://open.er-api.com/v6/latest/JPY', pick: j => j.rates && j.rates.KRW, date: j => j.time_last_update_utc && j.time_last_update_utc.slice(0, 16) },
+  ],
+};
+
+/* 가격 (엔, 세금 포함) – 마운자로 펜 가격은 클리닉 제공 실제 가격 (4개 세트 기준) */
 const PRICES = {
   consult: [
-    { name: '초진 상담료', price: 0, note: '온라인 예약 시 무료 (당일 방문 ¥3,300)' },
+    { name: '초진 상담료', price: 0, note: '온라인 예약 시 무료' },
     { name: '재진 상담료', price: 0, note: '처방 시 무료' },
-    { name: '혈액검사 (선택)', price: 5500, note: '당일 결과 · 신장/간 기능·HbA1c' },
+    { name: '혈액검사 (선택)', price: 5500, note: '당일 결과 · 신장/간 기능·HbA1c (샘플 가격)' },
     { name: '영문 처방전 · 약제 증명서', price: 0, note: '세관·항공사 확인용, 무료 발급' },
-    { name: '호텔 냉장 배송 (일본 내)', price: 1100, note: '온라인 진료 후 1~3영업일 · 홋카이도·오키나와 제외' },
+    { name: '호텔 냉장 배송 (일본 내)', price: 1100, note: '온라인 진료 후 1~3영업일 · 홋카이도·오키나와 제외 (샘플 가격)' },
   ],
   pens: [
-    { dose: 2.5, price: 3800,  weeks: '1~4주차', first: true },
-    { dose: 5,   price: 5800,  weeks: '5~8주차' },
-    { dose: 7.5, price: 8300,  weeks: '9~12주차' },
-    { dose: 10,  price: 10800, weeks: '13주차~' },
-    { dose: 12.5,price: 13300, weeks: '유지 용량' },
-    { dose: 15,  price: 15800, weeks: '최대 용량' },
+    { dose: 2.5, set4: 17800, weeks: '1~4주차', first: true },
+    { dose: 5,   set4: 29800, weeks: '5~8주차' },
+    { dose: 7.5, set4: 46800, weeks: '9~12주차' },
+    { dose: 10,  set4: 56800, weeks: '13주차~' },
+  ].map(p => ({ ...p, price: p.set4 / 4 })),   // price = 펜 1개 단가
+  dosesInfo: [
+    { dose: 2.5, weeks: '1~4주차' }, { dose: 5, weeks: '5~8주차' }, { dose: 7.5, weeks: '9~12주차' },
+    { dose: 10, weeks: '13주차~' }, { dose: 12.5, weeks: '유지 용량 · 문의' }, { dose: 15, weeks: '최대 용량 · 문의' },
   ],
   packs: [
     { id: 'p4',  label: '4주분 (펜 4개)',  pens: 4,  discount: 0 },
-    { id: 'p8',  label: '8주분 (펜 8개)',  pens: 8,  discount: 0.05 },
-    { id: 'p12', label: '12주분 (펜 12개)', pens: 12, discount: 0.10, note: '한국 휴대 반입 한도' },
+    { id: 'p8',  label: '8주분 (펜 8개)',  pens: 8,  discount: 0 },
+    { id: 'p12', label: '12주분 (펜 12개)', pens: 12, discount: 0, note: '한국 휴대 반입 한도' },
   ],
   extras: [
     { id: 'cooler', name: '보냉 가방 + 아이스팩 (귀국용)', price: 1100 },
@@ -70,10 +82,9 @@ const PRICES = {
   /* 한국 가격 비교 – 2.5mg 4주분, 보도 기준(주간경향 2026-09) */
   compare: [
     { label: '한국 (비급여 평균, 보도 기준)', krw: 300000, note: '병원·약국마다 가격 차이 큼' },
-    { label: '일본 온라인 클리닉 평균', jpy: 14500, note: '배송비 포함 12,100~17,000엔' },
-    { label: 'K-Rich Clinic 후쿠오카', jpy: 15200, note: '진료·처방·주사 교육 포함', us: true },
+    { label: '일본 온라인 클리닉 평균', jpy: 14500, note: '배송비 포함 12,100~17,000엔 · 진료 별도인 곳 많음' },
+    { label: 'K-RICH CLINIC 후쿠오카', jpy: 17800, note: '원장 한국어 진료·처방·주사 교육 포함', us: true },
   ],
-  fxKrwPer100Jpy: 853.84, // 2026-11-06 기준
 };
 
 /* 수령 방법 */

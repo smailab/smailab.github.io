@@ -375,3 +375,10 @@ label.f input.err, label.f select.err { border-color: var(--red); }
 @media (min-width: 760px) { .team .card.doctor { grid-template-columns: 220px 1fr; align-items: start; } }
 .avatar-photo { width: 100%; max-width: 220px; aspect-ratio: 4/5; object-fit: cover; border-radius: 14px; background: var(--bg-2); }
 .team .quote { margin-top: 10px !important; font-style: italic; color: var(--ink-3) !important; font-size: 14px !important; border-left: 3px solid var(--line); padding-left: 12px; }
+
+/* KRW conversion */
+.krw { font-size: .8em; font-weight: 600; color: var(--ink-3); white-space: nowrap; }
+.price-table td.num .krw, .pack .price .krw { display: block; font-size: 12.5px; margin-top: 2px; }
+.hero-card .hero-krw { display: block; font-size: 14px; margin-top: 2px; }
+.summary .total small.krw { font-size: 12px; font-weight: 600; }
+.choice .p .krw { font-size: 12px; }
